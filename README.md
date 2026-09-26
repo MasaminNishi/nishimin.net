@@ -59,8 +59,8 @@ result/                   nix build の成果物。wrangler はここを配信�
 
 ## 鍵・識別子の差し替え
 
-初期状態の `site.nix` と `static/keys` は `<...>` のプレースホルダ。
-実データに差し替える手順は以下。
+SSH 公開鍵と Nostr は設定済み。GPG は未設定（`publishWkd = false` のため非公開）。
+差し替え・追加の手順は以下。
 
 ### SSH 公開鍵
 

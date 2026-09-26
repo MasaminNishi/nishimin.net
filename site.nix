@@ -7,9 +7,9 @@
   domain = "nishimin.net";
   url = "https://nishimin.net";
 
-  handle = "<HANDLE>";
-  realName = "<REAL_NAME>";
-  tagline = "<1行バイオ>";
+  handle = "MasaminNishi";
+  realName = "m-nishijima";
+  tagline = "プログラマー";
   location = "Japan";
   email = "dev@nishimin.net";
 
@@ -27,17 +27,12 @@
     {
       id = "github";
       label = "GitHub";
-      url = "https://github.com/<GITHUB_USER>";
-    }
-    {
-      id = "x";
-      label = "X";
-      url = "https://x.com/<X_USER>";
+      url = "https://github.com/MasaminNishi";
     }
     {
       id = "nostr";
       label = "Nostr";
-      url = "https://njump.me/<NPUB>";
+      url = "https://njump.me/npub1ju9z6qmlmxsw7kmnzkywhpfdszyk42enxxeh72ug2wyrqr7qmfcshx5p26";
     }
   ];
 
@@ -51,8 +46,8 @@
 
   nostr = {
     # NIP-05 で返すのは 64 文字の hex 公開鍵。npub1... ではない。
-    # 変換: nak decode <npub> / nostr-tool などで hex 化する。
-    pubkeyHex = "<NOSTR_HEX_PUBKEY>";
+    # 変換: nak decode <npub> などで hex 化する。
+    pubkeyHex = "970a2d037fd9a0ef5b731588eb852d80896aab3331b37f2b885388300fc0da71";
   };
 
   pgp = {

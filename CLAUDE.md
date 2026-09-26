@@ -150,7 +150,8 @@ Nix は純粋で現在時刻を扱えないので、失効検査は CI（`.githu
 
 ## 鍵・ID の状態
 
-`site.nix` と `static/keys` は `<...>` のプレースホルダのまま。
+SSH 公開鍵と Nostr の hex 公開鍵は実データが入っている。
+未設定なのは `pgp.fingerprint` だけで、`publishWkd = false` なので公開はされていない。
 差し替え手順（SSH / GPG+WKD / Nostr hex）は `README.md` にある。
 
 `dev@nishimin.net` の WKD ハッシュは `gudx35f8m3ns6jx87gkuda1nmtsb53nd`
