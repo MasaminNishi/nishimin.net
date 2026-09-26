@@ -1,35 +1,39 @@
-// 物理媒体（QR / NFC）で配るリンクの中継リダイレクタ。媒体には
-// https://nishimin.net/touch を焼き、実際の飛び先は site.nix に持たせる。
+// 物理媒体（QR / NFC）で配るリンクの中継リダイレクタ。
+// 媒体には https://nishimin.net/go/<id> を焼き、実際の飛び先は site.nix に持たせる。
 //
 // 存在理由は間接参照そのもの。印刷して配った QR やカードは後から書き換えられないが、
-// site.nix を直せば配布済みの媒体の飛び先を変えられる。「/ に 302 するだけ」に
+// site.nix を直せば配布済みの媒体の飛び先を変えられる。「302 するだけ」に
 // 見えても消さないこと。
 //
 // アクセス数は記録していない。Pages Functions の console.log は
 // `wrangler pages deployment tail` を張っている間しか流れず保存されないため、
 // 書いても読めるものにならない。必要になったら Analytics Engine か KV を足す。
 //
-// 遷移先は site.nix の links[].id をキーにした許可リストからのみ選ぶ。
-// `?to=<任意 URL>` のような受け口は作らない（オープンリダイレクタになるため）。
+// 遷移先は /go.json の許可リストからのみ選ぶ。`?to=<任意 URL>` のような
+// 受け口は作らない（オープンリダイレクタになるため）。
+//
+// キャッチオール ([[key]]) なので /go・/go/<id>・/go/a/b のすべてをここで受ける。
+// 知らない id は既定の飛び先へ落とす。印刷物の id が古くなっても 404 にせず
+// どこかへ着地させるため。
 
-interface TouchTargets {
-  /** 既定の遷移先。site.nix の touch.default。 */
+interface GoTargets {
+  /** id に当たらなかったときの飛び先。site.nix の go.home。 */
   default: string;
   /** id -> URL の許可リスト。 */
   targets: Record<string, string>;
 }
 
-const FALLBACK: TouchTargets = { default: "/", targets: {} };
+const FALLBACK: GoTargets = { default: "/", targets: {} };
 
 // isolate が生きている間は使い回す。
-let cached: TouchTargets | undefined;
+let cached: GoTargets | undefined;
 
 async function loadTargets(
   context: EventContext<unknown, string, Record<string, unknown>>,
-): Promise<TouchTargets> {
+): Promise<GoTargets> {
   if (cached) return cached;
 
-  const url = new URL("/links.json", context.request.url);
+  const url = new URL("/go.json", context.request.url);
   const request = new Request(url.toString(), { method: "GET" });
 
   try {
@@ -37,7 +41,7 @@ async function loadTargets(
     const response = assets ? await assets.fetch(request) : await context.next(request);
     if (!response.ok) return FALLBACK;
 
-    cached = (await response.json()) as TouchTargets;
+    cached = (await response.json()) as GoTargets;
     return cached;
   } catch {
     return FALLBACK;
@@ -46,10 +50,13 @@ async function loadTargets(
 
 export const onRequest: PagesFunction = async (context) => {
   const url = new URL(context.request.url);
-  const key = url.searchParams.get("c");
+
+  // /go では params.key が無く、/go/a/b では配列になる。
+  const raw: string | string[] | undefined = context.params.key;
+  const key = Array.isArray(raw) ? raw.join("/") : raw;
 
   const { default: fallback, targets } = await loadTargets(context);
-  const target = (key !== null && targets[key]) || fallback;
+  const target = (key ? targets[key] : undefined) ?? fallback;
 
   return new Response(null, {
     status: 302,

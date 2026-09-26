@@ -36,7 +36,7 @@ nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後�
 ### プロフィールの編集
 
 **`site.nix` の 1 箇所だけ**を書き換える。`index.html` / `ansi.txt` / `plain.txt` /
-`humans.txt` / `links.json` / `nostr.json` / `security.txt` は
+`humans.txt` / `go.json` / `nostr.json` / `security.txt` は
 すべてそこから `lib/render.nix` が生成する。
 
 ASCII アートのバナーを変えるときは:
@@ -138,9 +138,9 @@ nix run .#deploy
 | `/ansi.txt`, `/plain.txt` | 上記の実体（単体でも取得できる） |
 | `/keys` | SSH 公開鍵 |
 | `/humans.txt` | 制作者・使用技術 |
-| `/links.json` | `/touch` の遷移先許可リスト |
-| `/touch` | 物理媒体（QR / NFC）用リダイレクタ（302） |
-| `/touch?c=<id>` | `site.nix` の `links[].id` へリダイレクト |
+| `/go.json` | `/go/<id>` の遷移先許可リスト |
+| `/go`, `/go/<id>` | 物理媒体（QR / NFC）用リダイレクタ（302） |
+| | `<id>` は `site.nix` の `links[].id` と組み込みの `home` |
 | `/.well-known/nostr.json` | NIP-05（CORS `*`） |
 | `/.well-known/security.txt` | RFC 9116 |
 | `/.well-known/openpgpkey/hu/<hash>` | WKD 公開鍵（`publishWkd = true` のとき） |
@@ -150,12 +150,12 @@ nix run .#deploy
 - **`functions/_middleware.ts` の curl 分岐はルートパスに限定している。**
   ここを外すと `curl -L /keys >> ~/.ssh/authorized_keys` が ASCII アートを
   書き込んでしまい、`/.well-known/*` の Content-Type と CORS も壊れる。
-- **`/touch` は「/ に 302 するだけ」に見えても消さないこと。**
+- **`/go` は「302 するだけ」に見えても消さないこと。**
   印刷して配った QR やカードは後から書き換えられない。飛び先を `site.nix` 側に
   持たせることで、配布済みの媒体の遷移先をあとから変えられる。これが存在理由。
   アクセス数は記録していない（Pages Functions の `console.log` は保存されないため）。
-- **`/touch` は任意 URL へのリダイレクトを受け付けない。**
-  `site.nix` の `links[].id` をキーにした許可リストのみ。オープンリダイレクタを作らないため。
+- **`/go` は任意 URL へのリダイレクトを受け付けない。**
+  `site.nix` の `links[].id` と組み込みの `home` だけ。オープンリダイレクタを作らないため。
 - 同じ URL で HTML とテキストを出し分けるので、ルートパスの応答には
   `Vary: User-Agent` を付けている。
 - **betterleaks に allowlist を足さないこと。** `paths` 指定の allowlist は findings を

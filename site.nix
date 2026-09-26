@@ -1,6 +1,6 @@
 # プロフィールデータの単一ソース。
 # index.html / ansi.txt / plain.txt / humans.txt / nostr.json / security.txt /
-# links.json は全てこのファイルから生成される（lib/render.nix）。
+# go.json は全てこのファイルから生成される（lib/render.nix）。
 #
 # <...> の値はプレースホルダ。差し替え手順は README.md を参照。
 {
@@ -22,7 +22,7 @@
     /_//_/_/___/_//_/_/_/_/_/_/_//_(_)_//_/\__/\__/
   '';
 
-  # 主要リンク。id は /touch?c=<id> の遷移先キーにもなる（許可リスト）。
+  # 主要リンク。id は /go/<id> の遷移先キーにもなる（許可リスト）。
   links = [
     {
       id = "github";
@@ -73,10 +73,14 @@
     preferredLanguages = "ja, en";
   };
 
-  touch = {
-    # /touch は QR / NFC など物理媒体に焼くリンクの中継先。配布済みの媒体は
+  go = {
+    # /go/<id> は QR / NFC など物理媒体に焼くリンクの中継先。配布済みの媒体は
     # 書き換えられないので、飛び先をここで持って後から変えられるようにしている。
-    # デフォルト遷移先。?c=<id> が links の id に一致すればそちらへ。
-    default = "/";
+    #
+    # <id> には links[].id に加えて "home" が使える。home は自サイト自身なので
+    # links には入れない（links は表示用のリンク一覧も兼ねているため、入れると
+    # 自分のページに「Homepage」というリンクが並んでしまう）。
+    # id を付けずに /go とだけ叩いた場合と、知らない id の場合もここへ落ちる。
+    home = "/";
   };
 }

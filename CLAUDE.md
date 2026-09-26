@@ -29,7 +29,7 @@ B=http://localhost:8788
 curl -s $B/ -H 'User-Agent: Mozilla/5.0' | head -3   # ブラウザ → HTML
 curl -s $B/                                          # curl → ANSI テキスト
 curl -s "$B/?plain"                                  # ANSI なし
-curl -sI $B/touch                                    # 302 + Location
+curl -sI $B/go                                       # 302 + Location
 curl -sI $B/.well-known/nostr.json                   # Access-Control-Allow-Origin: *
 curl -s $B/keys                                      # ← ASCII アートが返ったら middleware のバグ
 ```
@@ -58,7 +58,7 @@ site.nix ──> lib/render.nix ──> flake.nix の mkSite ──> result/    
 |---|---|
 | `index.html` | `templates/index.html.in` + `lib/render.nix` の `htmlVars` |
 | `ansi.txt` / `plain.txt` | `lib/render.nix` の `mkProfile`（同じ行データから色あり/なしを生成） |
-| `humans.txt`, `links.json` | `lib/render.nix` |
+| `humans.txt`, `go.json` | `lib/render.nix` |
 | `.well-known/nostr.json`, `security.txt` | `lib/render.nix` |
 
 プロフィールの変更は `site.nix` の 1 箇所で済ませる。表示の整形ロジックを変えるときだけ `lib/render.nix` を触る。
@@ -98,18 +98,18 @@ Function が自前で作った `Response` には乗らない（実測確認済�
 「適用済みマーカー」として使っている（`APPLIED_MARKER`）。この行を消すと判定が壊れる。
 ヘッダを足すときは `static/_headers` だけを編集すればよい（自動で Function 応答にも乗る）。
 
-### `/touch` の役割と制約
+### `/go` の役割と制約
 
 **「/ に 302 するだけ」に見えても消さないこと。** 印刷して配った QR やカードは後から
 書き換えられないので、飛び先を `site.nix` に持たせて後から変更できるようにしてある。
-これが `/touch` の存在理由で、`Cache-Control: no-store` もそのためにある
+これが `/go` の存在理由で、`Cache-Control: no-store` もそのためにある
 （キャッシュされると配布済みの端末が古い先へ飛び続ける）。
 
 アクセス数は記録していない。Pages Functions の `console.log` は
 `wrangler pages deployment tail` を張っている間しか流れず保存されないため、
 書いても読めるものにならない。必要になったら Analytics Engine か KV を足す。
 
-遷移先は `site.nix` の `links[].id` をキーにした許可リスト（`/links.json` 経由）からのみ選ぶ。
+遷移先は `/go.json` の許可リスト（`site.nix` の `links[].id` と組み込みの `home`）からのみ選ぶ。
 `?to=<任意 URL>` のような受け口を追加しないこと。
 
 ### npm 依存を持ち込まない
@@ -151,7 +151,7 @@ ANSI エスケープは `builtins.fromJSON ''""''` で得ている。Nix の文
 2. `site.nix` の `pgp.publishWkd = true` なのに `hu/<hash>` が無ければビルド失敗
    → `nix run .#wkd-export` で書き出す
 3. `site.nix` の `links[].id` が重複していたらビルド失敗（`lib/render.nix` の `assert`）
-   → `lib.listToAttrs` は先勝ちなので、重複すると `/touch?c=<id>` の遷移先が
+   → `lib.listToAttrs` は先勝ちなので、重複すると `/go/<id>` の遷移先が
      黙って消える。表示には両方出るため、止めないと気づけない
 
 `site.nix` の `pgp.publishWkd` は WKD だけでなく**PGP 表示全体のスイッチ**。`false` の間は

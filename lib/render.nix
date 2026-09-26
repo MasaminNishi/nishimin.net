@@ -194,16 +194,25 @@ let
       builtins.attrNames vars
     )) (builtins.attrValues vars) template;
 
-  # links[].id は /touch?c=<id> の許可リストのキーになる。lib.listToAttrs は
-  # 先勝ちなので、重複すると後の要素が links.json から黙って消える。画面と
-  # curl 出力には両方出るため見た目では気づけないので、ここで落とす。
+  # links[].id は /go/<id> の許可リストのキーになる。lib.listToAttrs は先勝ちなので、
+  # 重複すると後の要素が go.json から黙って消える。画面と curl 出力には両方出るため
+  # 見た目では気づけないので、ここで落とす。
   linkIds = map (l: l.id) site.links;
   duplicateIds = lib.unique (lib.filter (id: lib.count (i: i == id) linkIds > 1) linkIds);
+
+  # home は自サイト自身を指す組み込みの id。links 側で同じ id を使うと
+  # どちらが勝つか分かりにくいので予約する。
+  reservedIds = [ "home" ];
+  clashingIds = lib.intersectLists linkIds reservedIds;
 
 in
 assert lib.assertMsg (duplicateIds == [ ]) ''
   site.nix の links[].id が重複しています: ${concatStringsSep ", " duplicateIds}
-  /touch?c=<id> の遷移先が先勝ちで上書きされ、後ろの定義は無視されます。
+  /go/<id> の遷移先が先勝ちで上書きされ、後ろの定義は無視されます。
+'';
+assert lib.assertMsg (clashingIds == [ ]) ''
+  site.nix の links[].id に予約語が使われています: ${concatStringsSep ", " clashingIds}
+  これらは /go/<id> の組み込みの遷移先なので、links 側では使えません。
 '';
 {
   ansiTxt = mkProfile { color = true; };
@@ -248,11 +257,17 @@ assert lib.assertMsg (duplicateIds == [ ]) ''
       Software: ${concatStringsSep ", " site.stack}
   '';
 
-  # /touch の遷移先許可リスト。オープンリダイレクタにしないため、
+  # /go/<id> の遷移先許可リスト。オープンリダイレクタにしないため、
   # 任意 URL ではなくこの id -> url の対応表だけを受け付ける。
-  linksJson = toJSON {
-    default = site.touch.default;
-    targets = lib.listToAttrs (
+  #
+  # home は組み込み。links に入れると表示用のリンク一覧にも出てしまうので、
+  # ここでだけ足す（links は curl 出力と HTML のリンク一覧も兼ねている）。
+  goJson = toJSON {
+    default = site.go.home;
+    targets = {
+      home = site.go.home;
+    }
+    // lib.listToAttrs (
       map (l: {
         name = l.id;
         value = l.url;

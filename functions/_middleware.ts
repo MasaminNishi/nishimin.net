@@ -104,7 +104,7 @@ export const onRequest: PagesFunction = async (context) => {
   const url = new URL(request.url);
 
   // ルートパス以外には一切介入しない。
-  // （/touch のような Function の応答にはヘッダだけ足す）
+  // （/go のような Function の応答にはヘッダだけ足す）
   if (url.pathname !== "/" && url.pathname !== "/index.html") {
     return withSecurityHeaders(context, await context.next());
   }

@@ -40,7 +40,7 @@
               nostrJson
               securityTxt
               humansTxt
-              linksJson
+              goJson
               ;
             # 複数行の内容をシェルのクォートを介さずファイルとして渡す。
             passAsFile = [
@@ -50,7 +50,7 @@
               "nostrJson"
               "securityTxt"
               "humansTxt"
-              "linksJson"
+              "goJson"
             ];
           }
           ''
@@ -62,7 +62,7 @@
             cp "$ansiTxtPath"     "$out/ansi.txt"
             cp "$plainTxtPath"    "$out/plain.txt"
             cp "$humansTxtPath"   "$out/humans.txt"
-            cp "$linksJsonPath"   "$out/links.json"
+            cp "$goJsonPath"      "$out/go.json"
             cp "$nostrJsonPath"   "$out/.well-known/nostr.json"
             cp "$securityTxtPath" "$out/.well-known/security.txt"
 
