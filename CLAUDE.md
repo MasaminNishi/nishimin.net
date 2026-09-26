@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 nix develop              # 開発シェル（wrangler, jq, curl, gnupg, age, openssh, figlet, nixfmt, statix）
-nix run .#dev            # nix build → wrangler pages dev を http://localhost:8788 で起動
+nix run .#dev            # site-dev をビルドし wrangler pages dev を http://localhost:8788 で起動
 nix run .#fix            # nixfmt + statix 自動修正（コミット前に実行する）
 nix flake check          # nixfmt / statix / betterleaks / サイトのビルド
-nix build .#site         # 静的ツリーを result/ に生成
+nix build .#site         # 本番用の静的ツリーを result/ に生成
+nix build .#site-dev     # ローカル確認用（URL が localhost:8788）を result-dev/ に生成
 nix run .#deploy         # Cloudflare Pages へダイレクトアップロード
 nix run .#wkd-export     # GPG 公開鍵を WKD の hu ファイルへ書き出す
 nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後に一度だけ）
@@ -40,14 +41,16 @@ curl -s $B/keys                                      # ← ASCII アートが返
 ### データフロー — site.nix が単一ソース
 
 ```
-site.nix ──> lib/render.nix ──> flake.nix の siteDrv ──> result/
-                   ↑
+site.nix ──> lib/render.nix ──> flake.nix の mkSite ──> result/     (本番)
+                   ↑                                  └─> result-dev/ (localhost)
        templates/index.html.in
-                                 static/ ────────────────> result/（丸ごとコピー）
+                                 static/ ──────────────> 両方へ丸ごとコピー
 ```
 
 `lib/render.nix` は `site.nix` の attrset を受け取り、配信する各ファイルの**中身（文字列）を返す純関数群**。
-`flake.nix` の `siteDrv` がそれを `passAsFile` でファイル化し、`static/` のコピーの上に置く。
+`flake.nix` の `mkSite { name, url }` がそれを `passAsFile` でファイル化し、`static/` のコピーの上に置く。
+`url` を引数にしてあるのは、ローカル確認時に curl 出力とコピペ用コマンドを
+`http://localhost:8788` に向けるため（HTML の `href` は相対なのでどちらでも動く）。
 
 `result/` 配下の以下は**すべて生成物**。直接編集してはいけない:
 
@@ -63,8 +66,9 @@ site.nix ──> lib/render.nix ──> flake.nix の siteDrv ──> result/
 ### 入力と出力のディレクトリ
 
 - `static/` — 入力。そのまま配信されるファイル（CSS, `_headers`, 公開鍵, WKD policy）
-- `result/` — `nix build` の出力（`/nix/store` へのシンボリックリンク）。gitignore 済み。
+- `result/` — `nix build .#site`（本番用）の出力。`/nix/store` へのシンボリックリンクで gitignore 済み。
   `wrangler.jsonc` の `pages_build_output_dir` がここを指す
+- `result-dev/` — `nix build .#site-dev`（ローカル確認用）の出力。`nix run .#dev` が使う
 - `functions/` — リポジトリ直下に置いたまま。wrangler は **cwd の `functions/`** を読むので
   `result/` には入れない
 

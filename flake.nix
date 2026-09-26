@@ -12,14 +12,26 @@
       pkgs = nixpkgs.legacyPackages.${system};
       inherit (pkgs) lib;
 
-      # プロフィールの単一ソースと、そこから各ファイルを組み立てる純関数群。
+      # プロフィールの単一ソース。
       site = import ./site.nix;
-      rendered = import ./lib/render.nix { inherit lib site; };
 
-      # 配信する静的ツリー。static/ をそのままコピーし、site.nix 由来の
-      # 生成物を上から置く。wrangler.jsonc の pages_build_output_dir はこれを指す。
-      siteDrv =
-        pkgs.runCommand "nishimin-net-site"
+      # 配信する静的ツリーを作る。static/ をそのままコピーし、site.nix 由来の
+      # 生成物を上から置く。
+      #
+      # url を差し替えられるようにしてあるのは、ローカル確認のため。
+      # 本番 URL が埋まったままだと curl 出力やコピペ用コマンドが本番を指してしまい
+      # 動作確認しづらい（HTML の href は相対なのでどちらでも動く）。
+      mkSite =
+        { name, url }:
+        let
+          rendered = import ./lib/render.nix {
+            inherit lib;
+            site = site // {
+              inherit url;
+            };
+          };
+        in
+        pkgs.runCommand name
           {
             inherit (rendered)
               indexHtml
@@ -81,6 +93,20 @@
             }
           '';
 
+      # 本番用。site.nix の url をそのまま使う。
+      siteDrv = mkSite {
+        name = "nishimin-net-site";
+        inherit (site) url;
+      };
+
+      # ローカル確認用。nix run .#dev がこちらを result-dev に出す。
+      # 出力先を本番用と分けてあるので、dev のあとに手で wrangler pages deploy しても
+      # localhost 入りの成果物が本番に上がることはない。
+      siteDevDrv = mkSite {
+        name = "nishimin-net-site-dev";
+        url = "http://localhost:8788";
+      };
+
       # writeShellApplication をそのまま nix run できる app にする薄いラッパ。
       mkApp = name: description: drv: {
         type = "app";
@@ -106,6 +132,7 @@
       packages.${system} = {
         default = siteDrv;
         site = siteDrv;
+        site-dev = siteDevDrv;
         inherit betterleaks-pre-commit;
       };
 
@@ -143,8 +170,9 @@
             text = ''
               cd "$(git rev-parse --show-toplevel)"
               export WRANGLER_SEND_METRICS=false
-              nix build .#site --out-link result
-              exec wrangler pages dev --port 8788 "$@"
+              # 本番 URL ではなく localhost:8788 が埋まった成果物を使う。
+              nix build .#site-dev --out-link result-dev
+              exec wrangler pages dev result-dev --port 8788 "$@"
             '';
           }
         );

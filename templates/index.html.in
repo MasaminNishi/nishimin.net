@@ -37,7 +37,7 @@
           <dt>Nostr (NIP-05)</dt>
           <dd>
             <code>_@@domain@</code>
-            <a href="@nostrJsonUrl@">nostr.json</a>
+            <a href="@nostrJsonHref@">nostr.json</a>
           </dd>
         </dl>
       </section>
@@ -53,8 +53,8 @@
       <section>
         <h2>Meta</h2>
         <ul class="plain">
-          <li><a href="@securityTxtUrl@">security.txt</a> — 脆弱性連絡窓口 (RFC 9116)</li>
-          <li><a href="@humansTxtUrl@">humans.txt</a> — 制作者・使用技術</li>
+          <li><a href="@securityTxtHref@">security.txt</a> — 脆弱性連絡窓口 (RFC 9116)</li>
+          <li><a href="@humansTxtHref@">humans.txt</a> — 制作者・使用技術</li>
           <li><a href="mailto:@email@">@email@</a></li>
         </ul>
 

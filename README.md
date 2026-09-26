@@ -27,7 +27,7 @@ npm / pnpm の依存は持たない。`functions/*.ts` は wrangler 内蔵の es
 
 ```bash
 nix develop            # 開発シェル（wrangler, jq, curl, gnupg, age, figlet …）
-nix run .#dev          # ビルドして http://localhost:8788 で起動
+nix run .#dev          # ローカル用にビルドして http://localhost:8788 で起動
 nix flake check        # nixfmt / statix / betterleaks / サイトのビルド
 nix run .#fix          # nixfmt + statix 自動修正（コミット前に実行）
 nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後に一度だけ）
@@ -54,7 +54,8 @@ templates/index.html.in   @key@ プレースホルダ入りの HTML
 static/                   そのまま配信されるファイル（CSS, _headers, 公開鍵 …）
 functions/                Pages Functions（エッジで動く TypeScript）
 types/cloudflare.d.ts     Cloudflare 型の最小自前宣言（npm 依存を避けるため）
-result/                   nix build の成果物。wrangler はここを配信する
+result/                   nix build .#site の成果物（本番用）
+result-dev/               nix build .#site-dev の成果物（URL が localhost:8788）
 ```
 
 ## 鍵・識別子の差し替え

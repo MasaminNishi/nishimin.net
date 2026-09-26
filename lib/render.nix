@@ -22,14 +22,19 @@ let
     in
     s + lib.concatStrings (lib.genList (_: " ") (if deficit > 0 then deficit else 0));
 
-  # 各種 URL。site.url からの導出はここに集約する。
-  urls = {
-    keys = "${site.url}/keys";
-    securityTxt = "${site.url}/.well-known/security.txt";
-    humansTxt = "${site.url}/humans.txt";
-    nostrJson = "${site.url}/.well-known/nostr.json";
-    wkd = "${site.url}/.well-known/openpgpkey/hu/${site.pgp.wkdHash}";
+  # サイト内のパス。HTML の href はこちらを使う。相対にしておくと
+  # ローカル (localhost:8788) でも本番でもリンクがそのまま機能する。
+  paths = {
+    keys = "/keys";
+    securityTxt = "/.well-known/security.txt";
+    humansTxt = "/humans.txt";
+    nostrJson = "/.well-known/nostr.json";
+    wkd = "/.well-known/openpgpkey/hu/${site.pgp.wkdHash}";
   };
+
+  # 絶対 URL。コピペして使うコマンド例と curl 出力で使う。
+  # site.url は dev ビルドでは http://localhost:8788 に差し替わる。
+  urls = lib.mapAttrs (_: p: "${site.url}${p}") paths;
 
   # curl で叩いてそのまま使えるコマンド例。HTML と ANSI の両方で同じ文字列を使う。
   commands = {
@@ -139,9 +144,10 @@ let
     stack = stackHtml;
     pgpBlock = pgpHtml;
     nostrHex = x site.nostr.pubkeyHex;
-    securityTxtUrl = x urls.securityTxt;
-    humansTxtUrl = x urls.humansTxt;
-    nostrJsonUrl = x urls.nostrJson;
+    # href は相対。ローカルでも本番でもそのままリンクが機能する。
+    securityTxtHref = x paths.securityTxt;
+    humansTxtHref = x paths.humansTxt;
+    nostrJsonHref = x paths.nostrJson;
     cmdSsh = x commands.ssh;
   };
 
