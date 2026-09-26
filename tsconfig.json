@@ -1,0 +1,22 @@
+{
+  // エディタ支援用。npm の依存は持たないので types は空にし、
+  // Cloudflare の型は types/cloudflare.d.ts で自前宣言している。
+  // 実際のトランスパイルは wrangler 内蔵の esbuild が行う。
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "WebWorker"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["functions/**/*.ts", "types/**/*.d.ts"]
+}

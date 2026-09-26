@@ -1,0 +1,10 @@
+# nix build の成果物
+/result
+/result-*
+
+# wrangler のローカル状態
+/.wrangler
+/node_modules
+
+# direnv
+/.direnv

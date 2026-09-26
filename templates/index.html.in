@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@handle@ — @domain@</title>
+    <meta name="description" content="@tagline@" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="canonical" href="@url@/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="me" href="mailto:@email@" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <h1>@handle@</h1>
+        <p class="tagline">@tagline@</p>
+        <p class="meta">@realName@ · @location@</p>
+        <ul class="links">
+@links@
+        </ul>
+      </header>
+
+      <section>
+        <h2>Keys</h2>
+        <p class="lede">公開鍵はすべてプレーンテキストで直接取得できる。</p>
+
+        <h3>SSH</h3>
+        <pre><code>@cmdSsh@</code></pre>
+
+        <h3>age</h3>
+        <pre><code>@cmdAge@</code></pre>
+
+        <h3>OpenPGP</h3>
+        <pre><code>@cmdGpg@</code></pre>
+        <dl>
+          <dt>Fingerprint</dt>
+          <dd><code>@pgpFingerprint@</code></dd>
+          <dt>WKD</dt>
+          <dd><a href="@wkdUrl@">@wkdUrl@</a></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Identity</h2>
+        <dl>
+          <dt>Nostr (NIP-05)</dt>
+          <dd>
+            <code>_@@domain@</code>
+            <a href="@nostrJsonUrl@">nostr.json</a>
+          </dd>
+          <dt>Bluesky (AT Protocol)</dt>
+          <dd>
+            <code>@did@</code>
+            <a href="@atprotoDidUrl@">atproto-did</a>
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>CLI</h2>
+        <p class="lede">
+          <code>curl</code> でアクセスすると HTML ではなく ANSI カラーのプロフィールが返る。
+        </p>
+        <pre><code>curl @url@</code></pre>
+      </section>
+
+      <section>
+        <h2>Meta</h2>
+        <ul class="plain">
+          <li><a href="@securityTxtUrl@">security.txt</a> — 脆弱性連絡窓口 (RFC 9116)</li>
+          <li><a href="@humansTxtUrl@">humans.txt</a> — 制作者・使用技術</li>
+          <li><a href="mailto:@email@">@email@</a></li>
+        </ul>
+
+        <h3>Stack</h3>
+        <ul class="plain">
+@stack@
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

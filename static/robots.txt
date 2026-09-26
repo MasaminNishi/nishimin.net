@@ -1,0 +1,3 @@
+# 単一ページ構成なのでクロールは全面許可。sitemap.xml は置いていない。
+User-agent: *
+Allow: /

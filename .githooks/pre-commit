@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# betterleaks で staged 差分をスキャンする。
+# 実体は flake の apps.betterleaks-pre-commit なので、nix flake update 後も
+# 常に flake 定義どおりのバージョンが走る（hook の再設置は不要）。
+#
+# 有効化: nix run .#install-hooks
+# 回避:   git commit --no-verify
+set -euo pipefail
+exec nix run .#betterleaks-pre-commit

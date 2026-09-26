@@ -1,0 +1,5 @@
+# SSH 公開鍵。差し替え:
+#   cat ~/.ssh/id_ed25519.pub > static/keys
+# 利用側:
+#   curl -L https://nishimin.net/keys >> ~/.ssh/authorized_keys
+ssh-ed25519 AAAA<SSH_ED25519_PUBLIC_KEY_PLACEHOLDER> <HANDLE>@nishimin.net

@@ -1,0 +1,37 @@
+# Cloudflare Pages のヘッダ定義。ダッシュボードではなくこのファイルが正。
+# 上から評価され、マッチしたルールがすべて適用される。
+
+# Nostr NIP-05 はブラウザのクライアントから読まれるので CORS 必須。
+/.well-known/nostr.json
+  Access-Control-Allow-Origin: *
+  Content-Type: application/json; charset=utf-8
+
+# 公開鍵・テキストエンドポイントは拡張子が無いので Content-Type を明示する。
+/keys
+  Content-Type: text/plain; charset=utf-8
+
+/age.pub
+  Content-Type: text/plain; charset=utf-8
+
+/.well-known/atproto-did
+  Content-Type: text/plain; charset=utf-8
+
+/.well-known/security.txt
+  Content-Type: text/plain; charset=utf-8
+
+# WKD の hu ファイルは GPG 公開鍵のバイナリ。
+/.well-known/openpgpkey/hu/*
+  Content-Type: application/octet-stream
+  Access-Control-Allow-Origin: *
+
+/.well-known/openpgpkey/policy
+  Content-Type: text/plain; charset=utf-8
+
+# セキュリティヘッダ全般。
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: document-domain=(), microphone=(), camera=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'none'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'

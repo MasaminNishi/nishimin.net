@@ -1,0 +1,69 @@
+name: deploy
+
+# Cloudflare Pages の Git 連携ビルドは使わない。
+# Cloudflare 側のビルド環境に Nix が無いため、ここで nix build した成果物を
+# wrangler のダイレクトアップロードで送る。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: nix flake check
+        run: nix flake check -L
+
+      - name: nix build
+        run: nix build .#site -L --out-link result
+
+      # Nix は純粋なので現在時刻を扱えない。失効検査はここで行う。
+      - name: security.txt の Expires を検査
+        run: |
+          expires=$(sed -n 's/^Expires:[[:space:]]*//p' result/.well-known/security.txt)
+          if [ -z "$expires" ]; then
+            echo "::error::security.txt に Expires がありません (RFC 9116 で必須)"
+            exit 1
+          fi
+          now=$(date -u +%s)
+          until=$(date -u -d "$expires" +%s)
+          if [ "$until" -le "$now" ]; then
+            echo "::error::security.txt の Expires ($expires) が失効しています。site.nix を更新してください"
+            exit 1
+          fi
+          days=$(( (until - now) / 86400 ))
+          if [ "$days" -lt 30 ]; then
+            echo "::warning::security.txt の Expires まであと ${days} 日です。site.nix を更新してください"
+          fi
+          echo "Expires: $expires (残り ${days} 日)"
+
+      # fork からの PR には secrets が渡らないので、デプロイは同一リポジトリのみ。
+      - name: Deploy (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: nix run .#deploy -- --branch=main
+
+      - name: Deploy (preview)
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: nix run .#deploy -- --branch=pr-${{ github.event.pull_request.number }}

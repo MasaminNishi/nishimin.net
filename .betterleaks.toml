@@ -1,0 +1,38 @@
+# betterleaks の設定。
+#
+# このリポジトリは「公開鍵を意図的にコミットする」という性質上、鍵らしき文字列が
+# 正常系として存在する。下の allowlist はそれが将来ルール追加で誤検出されたときの
+# 保険であって、現時点では何も抑止していない（実測: betterleaks 1.x は
+# ssh-ed25519 / age1 の公開鍵を検出しない）。
+#
+# 秘密鍵は allowlist があっても検出されることを実測で確認済み。
+# static/keys に本物の AGE-SECRET-KEY を混ぜたスキャンで leaks found: 1 となる。
+
+# これが無いと既定ルールが丸ごと無効になる。消さないこと。
+[extend]
+useDefault = true
+
+# 公開鍵だけを置くパス。paths だけでなく regexes も併記して、
+# 「そのパスにある、公開鍵の形をした文字列」だけに絞る。
+# パス全体は除外していないので、秘密鍵を誤って置けば従来どおり検出される。
+[[allowlists]]
+description = "公開鍵エンドポイント（SSH / age の公開鍵はコミットして配信する）"
+paths = [
+  '''^static/keys$''',
+  '''^static/age\.pub$''',
+  '''^static/\.well-known/openpgpkey/hu/.*$''',
+]
+regexTarget = "match"
+regexes = [
+  '''ssh-(ed25519|rsa|dss)\s+[A-Za-z0-9+/=<>_]+''',
+  '''age1[a-z0-9<>_]+''',
+]
+
+# site.nix / README には hex 公開鍵・DID・フィンガープリントといった
+# 「公開してよい識別子」とそのプレースホルダが載る。
+[[allowlists]]
+description = "site.nix / README の公開識別子とプレースホルダ"
+paths = [
+  '''^site\.nix$''',
+  '''^README\.md$''',
+]
