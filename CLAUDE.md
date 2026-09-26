@@ -98,7 +98,16 @@ Function が自前で作った `Response` には乗らない（実測確認済�
 「適用済みマーカー」として使っている（`APPLIED_MARKER`）。この行を消すと判定が壊れる。
 ヘッダを足すときは `static/_headers` だけを編集すればよい（自動で Function 応答にも乗る）。
 
-### `/touch` はオープンリダイレクタにしない
+### `/touch` の役割と制約
+
+**「/ に 302 するだけ」に見えても消さないこと。** 印刷して配った QR やカードは後から
+書き換えられないので、飛び先を `site.nix` に持たせて後から変更できるようにしてある。
+これが `/touch` の存在理由で、`Cache-Control: no-store` もそのためにある
+（キャッシュされると配布済みの端末が古い先へ飛び続ける）。
+
+アクセス数は記録していない。Pages Functions の `console.log` は
+`wrangler pages deployment tail` を張っている間しか流れず保存されないため、
+書いても読めるものにならない。必要になったら Analytics Engine か KV を足す。
 
 遷移先は `site.nix` の `links[].id` をキーにした許可リスト（`/links.json` 経由）からのみ選ぶ。
 `?to=<任意 URL>` のような受け口を追加しないこと。

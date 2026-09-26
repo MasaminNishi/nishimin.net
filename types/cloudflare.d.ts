@@ -9,14 +9,8 @@ interface Fetcher {
   fetch(input: Request | string, init?: RequestInit): Promise<Response>;
 }
 
-interface IncomingRequestCfProperties {
-  country?: string;
-  colo?: string;
-  city?: string;
-}
-
 interface EventContext<Env, Params extends string, Data> {
-  request: Request & { cf?: IncomingRequestCfProperties };
+  request: Request;
   functionPath: string;
   // ASSETS は Pages が常に注入する静的アセットへのバインディング。
   env: Env & { ASSETS?: Fetcher };

@@ -1,4 +1,13 @@
-// NFC カード用の中継リダイレクタ。カードには https://nishimin.net/touch を焼く。
+// 物理媒体（QR / NFC）で配るリンクの中継リダイレクタ。媒体には
+// https://nishimin.net/touch を焼き、実際の飛び先は site.nix に持たせる。
+//
+// 存在理由は間接参照そのもの。印刷して配った QR やカードは後から書き換えられないが、
+// site.nix を直せば配布済みの媒体の飛び先を変えられる。「/ に 302 するだけ」に
+// 見えても消さないこと。
+//
+// アクセス数は記録していない。Pages Functions の console.log は
+// `wrangler pages deployment tail` を張っている間しか流れず保存されないため、
+// 書いても読めるものにならない。必要になったら Analytics Engine か KV を足す。
 //
 // 遷移先は site.nix の links[].id をキーにした許可リストからのみ選ぶ。
 // `?to=<任意 URL>` のような受け口は作らない（オープンリダイレクタになるため）。
@@ -36,21 +45,8 @@ async function loadTargets(
 }
 
 export const onRequest: PagesFunction = async (context) => {
-  const { request } = context;
-  const url = new URL(request.url);
+  const url = new URL(context.request.url);
   const key = url.searchParams.get("c");
-
-  // アクセス元ログ。IP は残さない。
-  console.log(
-    JSON.stringify({
-      event: "touch",
-      at: new Date().toISOString(),
-      key,
-      country: request.cf?.country ?? null,
-      userAgent: request.headers.get("user-agent"),
-      referer: request.headers.get("referer"),
-    }),
-  );
 
   const { default: fallback, targets } = await loadTargets(context);
   const target = (key !== null && targets[key]) || fallback;
@@ -59,7 +55,8 @@ export const onRequest: PagesFunction = async (context) => {
     status: 302,
     headers: {
       Location: new URL(target, url.origin).toString(),
-      // タップごとにログを取りたいのでキャッシュさせない。
+      // 配布済みの媒体の飛び先を後から変えられるようにするため、302 をキャッシュさせない。
+      // ここを緩めると site.nix を直しても、一度アクセスした端末は古い先へ飛び続ける。
       "Cache-Control": "no-store",
     },
   });
