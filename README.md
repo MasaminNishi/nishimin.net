@@ -162,6 +162,7 @@ nix run .#deploy
   `site.nix` の `links[].id` をキーにした許可リストのみ。オープンリダイレクタを作らないため。
 - 同じ URL で HTML とテキストを出し分けるので、ルートパスの応答には
   `Vary: User-Agent` を付けている。
-- `.betterleaks.toml` の `[extend] useDefault = true` を消さないこと。
-  消すと既定のシークレット検出ルールが丸ごと無効になる。
-  公開鍵のパスだけを許可しており、秘密鍵は従来どおり検出される。
+- **betterleaks に allowlist を足さないこと。** `paths` 指定の allowlist は findings を
+  除外するのではなく、そのファイルをスキャン対象から丸ごと外す。`static/keys` を
+  allowlist に入れると、そこに貼り間違えた秘密鍵が無検査で通る（実測確認済み）。
+  公開鍵は既定ルールに引っかからないので allowlist は元々不要。

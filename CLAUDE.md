@@ -114,13 +114,19 @@ ANSI エスケープは `builtins.fromJSON ''""''` で得ている。Nix の文
 `lib/render.nix` を編集するとき、**生の ESC バイト（0x1B）をファイルに書き込むと
 `fromJSON` が JSON パースエラーで落ちる**。リテラルの 6 文字 `` を保つこと。
 
-### betterleaks
+### betterleaks — allowlist を足さない
 
-`.betterleaks.toml` の `[extend] useDefault = true` を消さないこと（消すと既定ルールが丸ごと無効）。
-公開鍵を意図的にコミットするリポジトリなので allowlist を置いているが、実測では:
+`.betterleaks.toml` は**意図的に置いていない**。公開鍵を意図的にコミットするリポジトリなので
+一度 allowlist を書いたが、実測の結果それが有害だと分かったため削除した。
 
-- betterleaks 1.x は `ssh-ed25519` / `age1` の**公開鍵を検出しない**（allowlist は現状ほぼ保険）
-- `static/keys` に本物形式の `AGE-SECRET-KEY` を混ぜると**allowlist があっても検出される**
+- betterleaks 1.x は `ssh-ed25519` / `age1` の**公開鍵を検出しない**ので allowlist は元々不要
+- `paths` 指定の allowlist は「findings を除外する」のではなく
+  **そのファイルをスキャン対象から丸ごと外す**（`static/keys` に本物の `AGE-SECRET-KEY` を
+  置くと、allowlist ありで `scanned 0 bytes`／なしで `leaks found: 1`）
+- つまり秘密鍵を貼り間違える可能性が最も高いファイルが、まさに無検査になっていた
+
+将来 allowlist が必要になっても `paths` だけで書かないこと。`[extend] useDefault = true` を
+伴わない設定ファイルは既定ルールを丸ごと無効にする点にも注意。
 
 ### ビルド時ガード
 

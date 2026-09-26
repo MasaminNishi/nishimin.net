@@ -93,10 +93,14 @@
 
       # betterleaks pre-commit hook の実体。.githooks/pre-commit から
       # `nix run .#betterleaks-pre-commit` で呼ばれ、毎回 flake 定義の最新版が動く。
+      #
+      # --staged が staged 差分を見る正しいフラグ。--pre-commit（unstaged の git diff を
+      # 見る）を併記すると後者が勝ち、git add 済みの内容が 0 バイト扱いになって
+      # 素通りする。実測で確認済みなので --pre-commit を足さないこと。
       betterleaks-pre-commit = pkgs.writeShellApplication {
         name = "betterleaks-pre-commit";
         runtimeInputs = [ pkgs.betterleaks ];
-        text = "exec betterleaks git --pre-commit --redact --staged --no-banner";
+        text = "exec betterleaks git --staged --redact --no-banner";
       };
     in
     {
@@ -122,7 +126,8 @@
           touch $out
         '';
 
-        # シークレットスキャン。公開鍵は意図的にコミットするので .betterleaks.toml で除外している。
+        # シークレットスキャン。allowlist は置かない（公開鍵は既定ルールに引っかからず、
+        # paths 指定の allowlist はそのファイルをスキャン対象から丸ごと外してしまうため）。
         betterleaks = pkgs.runCommand "betterleaks" { nativeBuildInputs = [ pkgs.betterleaks ]; } ''
           betterleaks dir ${self} --no-banner --no-color --redact -l error
           touch $out
