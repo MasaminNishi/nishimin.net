@@ -28,15 +28,7 @@
 
         <h3>SSH</h3>
         <pre><code>@cmdSsh@</code></pre>
-
-        <h3>OpenPGP</h3>
-        <pre><code>@cmdGpg@</code></pre>
-        <dl>
-          <dt>Fingerprint</dt>
-          <dd><code>@pgpFingerprint@</code></dd>
-          <dt>WKD</dt>
-          <dd><a href="@wkdUrl@">@wkdUrl@</a></dd>
-        </dl>
+@pgpBlock@
       </section>
 
       <section>

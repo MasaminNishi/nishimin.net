@@ -61,8 +61,14 @@
     # WKD direct method のハッシュ。local-part "dev" を小文字化 → SHA-1 → z-base-32。
     # `gpg-wks-client --print-wkd-hash dev@nishimin.net` で照合できる。
     wkdHash = "gudx35f8m3ns6jx87gkuda1nmtsb53nd";
-    # 公開鍵バイナリ（static/.well-known/openpgpkey/hu/<wkdHash>）を配置済みなら true。
-    # false の間は WKD の hu ファイルを配信しない（空ファイルを置くとクライアントが壊れるため）。
+    #
+    # PGP まわりの一括スイッチ。false の間は
+    #   - WKD の hu ファイルを配信しない（空ファイルはクライアントを壊すため）
+    #   - index.html / curl 出力に PGP セクションを出さない
+    #   - security.txt の Encryption 行を出さない
+    # ことで、鍵が無いのにプレースホルダだけ公開される状態を防ぐ。
+    #
+    # 鍵を作ったら fingerprint を埋め、nix run .#wkd-export してから true にする。
     publishWkd = false;
   };
 

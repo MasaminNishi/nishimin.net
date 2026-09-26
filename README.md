@@ -9,7 +9,6 @@ GUI 操作は使わない。ルーティング・ヘッダ・エッジロジッ�
 ```
 $ curl https://nishimin.net          # 端末にはプレーンテキスト
 $ curl -L https://nishimin.net/keys >> ~/.ssh/authorized_keys
-$ gpg --locate-keys dev@nishimin.net # WKD 経由で公開鍵を取得
 ```
 
 ## 構成
@@ -82,8 +81,14 @@ gpg --fingerprint dev@nishimin.net            # → site.nix の pgp.fingerprint
 nix run .#wkd-export                          # hu ファイルを書き出す
 ```
 
-そのあと `site.nix` の `pgp.publishWkd` を `true` にする。`false` の間は
-`hu/` を配信しない（空ファイルを置くと WKD クライアントが壊れるため）。
+そのあと `site.nix` の `pgp.publishWkd` を `true` にする。これは PGP 表示全体の
+スイッチで、`false` の間は次のすべてが出ない。鍵が無いのにプレースホルダだけが
+公開される状態を防ぐため。
+
+- WKD の `hu/` ファイル（空ファイルを置くと WKD クライアントが壊れる）
+- `index.html` と curl 出力の PGP セクション（フィンガープリント、`gpg --locate-keys`）
+- `security.txt` の `Encryption:` 行
+
 `publishWkd = true` なのに鍵が無ければ `nix build` が失敗する。
 
 確認:

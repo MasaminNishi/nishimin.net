@@ -137,7 +137,10 @@ ANSI エスケープは `builtins.fromJSON ''""''` で得ている。Nix の文
 2. `site.nix` の `pgp.publishWkd = true` なのに `hu/<hash>` が無ければビルド失敗
    → `nix run .#wkd-export` で書き出す
 
-`publishWkd = false` の間は `hu/` を配信しない。空ファイルを置くと WKD クライアントが壊れるため。
+`site.nix` の `pgp.publishWkd` は WKD だけでなく**PGP 表示全体のスイッチ**。`false` の間は
+`hu/` ファイル・`index.html` と curl 出力の PGP セクション・`security.txt` の `Encryption:` 行が
+すべて出ない（鍵が無いのにプレースホルダだけ公開されるのを防ぐため）。
+実装は `lib/render.nix` の `publishWkd` 分岐と、テンプレートの `@pgpBlock@`。
 
 ### security.txt の Expires
 
