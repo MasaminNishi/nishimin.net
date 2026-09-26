@@ -65,7 +65,7 @@ site.nix ──> lib/render.nix ──> flake.nix の mkSite ──> result/    
 
 ### 入力と出力のディレクトリ
 
-- `static/` — 入力。そのまま配信されるファイル（CSS, `_headers`, 公開鍵, WKD policy）
+- `static/` — 入力。そのまま配信されるファイル（`_headers`, 公開鍵, WKD policy, 404.html）
 - `result/` — `nix build .#site`（本番用）の出力。`/nix/store` へのシンボリックリンクで gitignore 済み。
   `wrangler.jsonc` の `pages_build_output_dir` がここを指す
 - `result-dev/` — `nix build .#site-dev`（ローカル確認用）の出力。`nix run .#dev` が使う

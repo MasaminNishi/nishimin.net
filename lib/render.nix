@@ -148,9 +148,7 @@ let
   x = lib.escapeXML;
 
   linksHtml = concatStringsSep "\n" (
-    map (
-      l: "        <li><a class=\"link\" rel=\"me\" href=\"${x l.url}\">${x l.label}</a></li>"
-    ) site.links
+    map (l: "        <li><a rel=\"me\" href=\"${x l.url}\">${x l.label}</a></li>") site.links
   );
 
   stackHtml = concatStringsSep "\n" (map (s: "        <li>${x s}</li>") site.stack);
@@ -245,7 +243,7 @@ assert lib.assertMsg (duplicateIds == [ ]) ''
       Location: ${site.location}
 
     /* SITE */
-      Standards: HTML5, CSS3, RFC 9116, NIP-05${lib.optionalString publishWkd ", OpenPGP WKD"}
+      Standards: HTML5, RFC 9116, NIP-05${lib.optionalString publishWkd ", OpenPGP WKD"}
       Components: なし（依存ゼロ・JavaScript なし）
       Software: ${concatStringsSep ", " site.stack}
   '';

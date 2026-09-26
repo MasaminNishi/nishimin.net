@@ -5,26 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@handle@ — @domain@</title>
     <meta name="description" content="@tagline@" />
+    <!-- CSS は剥いである。color-scheme はブラウザ既定の配色を
+         OS のダークモードに追随させるためのもので、スタイルではない。 -->
     <meta name="color-scheme" content="dark light" />
     <link rel="canonical" href="@url@/" />
-    <link rel="stylesheet" href="/style.css" />
     <link rel="me" href="mailto:@email@" />
     <link rel="icon" href="data:," />
   </head>
   <body>
     <main>
-      <header class="hero">
+      <header>
         <h1>@handle@</h1>
-        <p class="tagline">@tagline@</p>
-        <p class="meta">@realName@ · @location@</p>
-        <ul class="links">
+        <p>@tagline@</p>
+        <p>@realName@ · @location@</p>
+        <ul>
 @links@
         </ul>
       </header>
 
       <section>
         <h2>Keys</h2>
-        <p class="lede">公開鍵はプレーンテキストで直接取得できる。</p>
+        <p>公開鍵はプレーンテキストで直接取得できる。</p>
 
         <h3>SSH</h3>
         <pre><code>@cmdSsh@</code></pre>
@@ -44,7 +45,7 @@
 
       <section>
         <h2>CLI</h2>
-        <p class="lede">
+        <p>
           <code>curl</code> でアクセスすると HTML ではなく ANSI カラーのプロフィールが返る。
         </p>
         <pre><code>curl @url@</code></pre>
@@ -52,14 +53,14 @@
 
       <section>
         <h2>Meta</h2>
-        <ul class="plain">
+        <ul>
           <li><a href="@securityTxtHref@">security.txt</a> — 脆弱性連絡窓口 (RFC 9116)</li>
           <li><a href="@humansTxtHref@">humans.txt</a> — 制作者・使用技術</li>
           <li><a href="mailto:@email@">@email@</a></li>
         </ul>
 
         <h3>Stack</h3>
-        <ul class="plain">
+        <ul>
 @stack@
         </ul>
       </section>

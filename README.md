@@ -51,7 +51,7 @@ figlet -f smslant -w 120 "nishimin.net"   # 出力を site.nix の banner に貼
 site.nix                  プロフィールデータの単一ソース
 lib/render.nix            site.nix → 各ファイルの中身を組み立てる純関数群
 templates/index.html.in   @key@ プレースホルダ入りの HTML
-static/                   そのまま配信されるファイル（CSS, _headers, 公開鍵 …）
+static/                   そのまま配信されるファイル（_headers, 公開鍵, 404.html …）
 functions/                Pages Functions（エッジで動く TypeScript）
 types/cloudflare.d.ts     Cloudflare 型の最小自前宣言（npm 依存を避けるため）
 result/                   nix build .#site の成果物（本番用）

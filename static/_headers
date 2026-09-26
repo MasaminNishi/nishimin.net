@@ -26,6 +26,8 @@
 
 # セキュリティヘッダ全般。
 # X-Content-Type-Options は _middleware.ts が「適用済みマーカー」として使うので消さないこと。
+# CSP の style-src は現在 CSS が無いので効いていないが、あとでスタイルを戻すときに
+# CSP 側の編集を忘れて「読み込まれない」と悩まないよう残してある。
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

@@ -305,7 +305,7 @@
           echo "    nix run .#dev          ビルドして http://localhost:8788 で起動"
           echo "    nix run .#deploy       本番へダイレクトアップロード"
           echo "    nix run .#fix          nixfmt + statix 自動修正（コミット前）"
-          echo "    nix flake check        フォーマット / lint / 秘密スキャン / ビルド"
+          echo "    nix flake check        ビルド / 型 / フォーマット / lint / 秘密スキャン"
           echo "    nix run .#wkd-export   GPG 公開鍵を WKD の hu へ書き出す"
           echo "    nix run .#install-hooks  pre-commit hook を有効化（clone 後に一度）"
           echo ""
