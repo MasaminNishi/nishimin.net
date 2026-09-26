@@ -56,7 +56,7 @@ site.nix ──> lib/render.nix ──> flake.nix の siteDrv ──> result/
 | `index.html` | `templates/index.html.in` + `lib/render.nix` の `htmlVars` |
 | `ansi.txt` / `plain.txt` | `lib/render.nix` の `mkProfile`（同じ行データから色あり/なしを生成） |
 | `humans.txt`, `links.json` | `lib/render.nix` |
-| `.well-known/nostr.json`, `security.txt`, `atproto-did` | `lib/render.nix` |
+| `.well-known/nostr.json`, `security.txt` | `lib/render.nix` |
 
 プロフィールの変更は `site.nix` の 1 箇所で済ませる。表示の整形ロジックを変えるときだけ `lib/render.nix` を触る。
 
@@ -147,8 +147,8 @@ Nix は純粋で現在時刻を扱えないので、失効検査は CI（`.githu
 
 ## 鍵・ID の状態
 
-`site.nix` と `static/keys` / `static/age.pub` は `<...>` のプレースホルダのまま。
-差し替え手順（SSH / age / GPG+WKD / Nostr hex / Bluesky DID）は `README.md` にある。
+`site.nix` と `static/keys` は `<...>` のプレースホルダのまま。
+差し替え手順（SSH / GPG+WKD / Nostr hex）は `README.md` にある。
 
 `dev@nishimin.net` の WKD ハッシュは `gudx35f8m3ns6jx87gkuda1nmtsb53nd`
 （`gpg-wks-client --print-wkd-hash` で照合済み）。

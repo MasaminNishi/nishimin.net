@@ -27,7 +27,6 @@
               plainTxt
               nostrJson
               securityTxt
-              atprotoDid
               humansTxt
               linksJson
               ;
@@ -38,7 +37,6 @@
               "plainTxt"
               "nostrJson"
               "securityTxt"
-              "atprotoDid"
               "humansTxt"
               "linksJson"
             ];
@@ -55,7 +53,6 @@
             cp "$linksJsonPath"   "$out/links.json"
             cp "$nostrJsonPath"   "$out/.well-known/nostr.json"
             cp "$securityTxtPath" "$out/.well-known/security.txt"
-            cp "$atprotoDidPath"  "$out/.well-known/atproto-did"
 
             # テンプレートの置換漏れはここで落とす。
             if grep -nE '@[a-z][a-zA-Z0-9_]*@' "$out/index.html"; then

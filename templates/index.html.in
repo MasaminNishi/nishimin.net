@@ -24,13 +24,10 @@
 
       <section>
         <h2>Keys</h2>
-        <p class="lede">公開鍵はすべてプレーンテキストで直接取得できる。</p>
+        <p class="lede">公開鍵はプレーンテキストで直接取得できる。</p>
 
         <h3>SSH</h3>
         <pre><code>@cmdSsh@</code></pre>
-
-        <h3>age</h3>
-        <pre><code>@cmdAge@</code></pre>
 
         <h3>OpenPGP</h3>
         <pre><code>@cmdGpg@</code></pre>
@@ -49,11 +46,6 @@
           <dd>
             <code>_@@domain@</code>
             <a href="@nostrJsonUrl@">nostr.json</a>
-          </dd>
-          <dt>Bluesky (AT Protocol)</dt>
-          <dd>
-            <code>@did@</code>
-            <a href="@atprotoDidUrl@">atproto-did</a>
           </dd>
         </dl>
       </section>

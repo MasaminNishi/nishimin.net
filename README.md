@@ -1,6 +1,6 @@
 # nishimin.net
 
-技術者向けアイデンティティハブ。SSH / age / OpenPGP / Nostr / Bluesky の公開鍵と識別子を
+技術者向けアイデンティティハブ。SSH 公開鍵 / OpenPGP / Nostr の識別子を
 標準パスで配信し、`curl` で叩くと ANSI カラーのプロフィールを返す。
 
 GUI 操作は使わない。ルーティング・ヘッダ・エッジロジック・開発環境・デプロイのすべてが
@@ -37,7 +37,7 @@ nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後�
 ### プロフィールの編集
 
 **`site.nix` の 1 箇所だけ**を書き換える。`index.html` / `ansi.txt` / `plain.txt` /
-`humans.txt` / `links.json` / `nostr.json` / `security.txt` / `atproto-did` は
+`humans.txt` / `links.json` / `nostr.json` / `security.txt` は
 すべてそこから `lib/render.nix` が生成する。
 
 ASCII アートのバナーを変えるときは:
@@ -60,7 +60,7 @@ result/                   nix build の成果物。wrangler はここを配信�
 
 ## 鍵・識別子の差し替え
 
-初期状態の `site.nix` と `static/keys` / `static/age.pub` は `<...>` のプレースホルダ。
+初期状態の `site.nix` と `static/keys` は `<...>` のプレースホルダ。
 実データに差し替える手順は以下。
 
 ### SSH 公開鍵
@@ -68,13 +68,6 @@ result/                   nix build の成果物。wrangler はここを配信�
 ```bash
 ssh-keygen -t ed25519 -C "dev@nishimin.net"   # まだ鍵が無い場合
 cat ~/.ssh/id_ed25519.pub > static/keys
-```
-
-### age 公開鍵
-
-```bash
-age-keygen -o ~/.config/age/keys.txt          # 秘密鍵。絶対にコミットしない
-age-keygen -y ~/.config/age/keys.txt > static/age.pub
 ```
 
 ### OpenPGP (WKD)
@@ -107,11 +100,6 @@ gpg --locate-keys dev@nishimin.net
 nak decode npub1...     # hex に変換
 ```
 
-### Bluesky (AT Protocol)
-
-Bluesky アプリの Settings → Advanced → Change handle → I have my own domain で
-表示される `did:plc:...` を `site.nix` の `atproto.did` に書く。
-
 ### security.txt の Expires
 
 RFC 9116 で必須かつ未来日でなければならない。`site.nix` の `securityTxt.expires` を
@@ -143,14 +131,12 @@ nix run .#deploy
 | `/?plain` | ANSI エスケープなしのテキスト |
 | `/ansi.txt`, `/plain.txt` | 上記の実体（単体でも取得できる） |
 | `/keys` | SSH 公開鍵 |
-| `/age.pub` | age 公開鍵 |
 | `/humans.txt` | 制作者・使用技術 |
 | `/links.json` | `/touch` の遷移先許可リスト |
 | `/touch` | NFC カード用リダイレクタ（302） |
 | `/touch?c=<id>` | `site.nix` の `links[].id` へリダイレクト |
 | `/.well-known/nostr.json` | NIP-05（CORS `*`） |
 | `/.well-known/security.txt` | RFC 9116 |
-| `/.well-known/atproto-did` | Bluesky ドメイン認証 |
 | `/.well-known/openpgpkey/hu/<hash>` | WKD 公開鍵（`publishWkd = true` のとき） |
 
 ### 設計上の注意

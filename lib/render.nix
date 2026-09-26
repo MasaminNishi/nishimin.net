@@ -21,18 +21,15 @@ let
   # 各種 URL。site.url からの導出はここに集約する。
   urls = {
     keys = "${site.url}/keys";
-    agePub = "${site.url}/age.pub";
     securityTxt = "${site.url}/.well-known/security.txt";
     humansTxt = "${site.url}/humans.txt";
     nostrJson = "${site.url}/.well-known/nostr.json";
-    atprotoDid = "${site.url}/.well-known/atproto-did";
     wkd = "${site.url}/.well-known/openpgpkey/hu/${site.pgp.wkdHash}";
   };
 
   # curl で叩いてそのまま使えるコマンド例。HTML と ANSI の両方で同じ文字列を使う。
   commands = {
     ssh = "curl -L ${urls.keys} >> ~/.ssh/authorized_keys";
-    age = "curl -L ${urls.agePub}";
     gpg = "gpg --locate-keys ${site.email}";
   };
 
@@ -73,13 +70,11 @@ let
         ""
         (section "KEYS")
         (row "ssh" (green commands.ssh))
-        (row "age" (green commands.age))
         (row "gpg (WKD)" (green commands.gpg))
         (row "fingerprint" site.pgp.fingerprint)
         ""
         (section "IDENTITY")
         (row "nostr" "_@${site.domain}  ${dim urls.nostrJson}")
-        (row "bluesky" "${site.atproto.did}  ${dim urls.atprotoDid}")
         ""
         (section "MISC")
         (row "security" (cyan urls.securityTxt))
@@ -118,15 +113,12 @@ let
     links = linksHtml;
     stack = stackHtml;
     nostrHex = x site.nostr.pubkeyHex;
-    did = x site.atproto.did;
     pgpFingerprint = x site.pgp.fingerprint;
     wkdUrl = x urls.wkd;
     securityTxtUrl = x urls.securityTxt;
     humansTxtUrl = x urls.humansTxt;
     nostrJsonUrl = x urls.nostrJson;
-    atprotoDidUrl = x urls.atprotoDid;
     cmdSsh = x commands.ssh;
-    cmdAge = x commands.age;
     cmdGpg = x commands.gpg;
   };
 
@@ -163,9 +155,6 @@ in
     Canonical: ${urls.securityTxt}
   '';
 
-  # 単一行 + 改行。Bluesky のドメイン認証はこの中身を厳密に見る。
-  atprotoDid = site.atproto.did + "\n";
-
   humansTxt = ''
     /* TEAM */
       Developer: ${site.realName} (${site.handle})
@@ -174,7 +163,7 @@ in
       Location: ${site.location}
 
     /* SITE */
-      Standards: HTML5, CSS3, RFC 9116, NIP-05, AT Protocol, OpenPGP WKD
+      Standards: HTML5, CSS3, RFC 9116, NIP-05, OpenPGP WKD
       Components: なし（依存ゼロ・JavaScript なし）
       Software: ${concatStringsSep ", " site.stack}
   '';

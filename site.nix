@@ -35,11 +35,6 @@
       url = "https://x.com/<X_USER>";
     }
     {
-      id = "bluesky";
-      label = "Bluesky";
-      url = "https://bsky.app/profile/nishimin.net";
-    }
-    {
       id = "nostr";
       label = "Nostr";
       url = "https://njump.me/<NPUB>";
@@ -58,11 +53,6 @@
     # NIP-05 で返すのは 64 文字の hex 公開鍵。npub1... ではない。
     # 変換: nak decode <npub> / nostr-tool などで hex 化する。
     pubkeyHex = "<NOSTR_HEX_PUBKEY>";
-  };
-
-  atproto = {
-    # Bluesky の設定画面 → Advanced → Change handle → I have my own domain で表示される DID。
-    did = "did:plc:<ATPROTO_DID>";
   };
 
   pgp = {

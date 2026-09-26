@@ -1,5 +1,8 @@
 # Cloudflare Pages のヘッダ定義。ダッシュボードではなくこのファイルが正。
 # 上から評価され、マッチしたルールがすべて適用される。
+#
+# ここに足したルールは Function の応答にも自動で乗る
+# （functions/_middleware.ts が静的アセットの応答から引き写す）。
 
 # Nostr NIP-05 はブラウザのクライアントから読まれるので CORS 必須。
 /.well-known/nostr.json
@@ -8,12 +11,6 @@
 
 # 公開鍵・テキストエンドポイントは拡張子が無いので Content-Type を明示する。
 /keys
-  Content-Type: text/plain; charset=utf-8
-
-/age.pub
-  Content-Type: text/plain; charset=utf-8
-
-/.well-known/atproto-did
   Content-Type: text/plain; charset=utf-8
 
 /.well-known/security.txt
@@ -28,6 +25,7 @@
   Content-Type: text/plain; charset=utf-8
 
 # セキュリティヘッダ全般。
+# X-Content-Type-Options は _middleware.ts が「適用済みマーカー」として使うので消さないこと。
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

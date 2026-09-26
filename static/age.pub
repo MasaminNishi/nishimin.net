@@ -1,4 +1,0 @@
-# age 公開鍵。差し替え:
-#   age-keygen -o ~/.config/age/keys.txt   # 秘密鍵。絶対にコミットしない
-#   age-keygen -y ~/.config/age/keys.txt > static/age.pub
-age1<AGE_PUBLIC_KEY_PLACEHOLDER>
