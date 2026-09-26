@@ -57,18 +57,71 @@ let
       cyan = sgr "36";
       green = sgr "32";
 
-      # 見出し行。
-      section = title: "  ${heading title}";
-
-      # ラベル + 値の行。ラベルは 13 桁に揃える。
-      row = label: value: "    ${dim (padTo 13 label)}${value}";
-
-      linkRows = map (l: row l.label (cyan l.url)) site.links;
-
-      pgpRows = lib.optionals publishWkd [
-        (row "gpg (WKD)" (green commands.gpg))
-        (row "fingerprint" site.pgp.fingerprint)
+      # 各セクションをまずデータとして組む。ここから最長ラベルを測るので、
+      # 行を足してもラベル幅が自動で追随する（桁数を決め打つと、長いラベルを
+      # 入れたときに詰め物が入らず値と密着して黙って崩れる）。
+      sections = [
+        {
+          title = "LINKS";
+          rows = map (l: {
+            inherit (l) label;
+            value = cyan l.url;
+          }) site.links;
+        }
+        {
+          title = "KEYS";
+          rows = [
+            {
+              label = "ssh";
+              value = green commands.ssh;
+            }
+          ]
+          ++ lib.optionals publishWkd [
+            {
+              label = "gpg (WKD)";
+              value = green commands.gpg;
+            }
+            {
+              label = "fingerprint";
+              value = site.pgp.fingerprint;
+            }
+          ];
+        }
+        {
+          title = "IDENTITY";
+          rows = [
+            {
+              label = "nostr";
+              value = "_@${site.domain}  ${dim urls.nostrJson}";
+            }
+          ];
+        }
+        {
+          title = "MISC";
+          rows = [
+            {
+              label = "security";
+              value = cyan urls.securityTxt;
+            }
+            {
+              label = "humans";
+              value = cyan urls.humansTxt;
+            }
+          ];
+        }
       ];
+
+      # 最長ラベル + 2 桁。値との間に必ず 2 つ以上の空白が入る。
+      labelWidth =
+        2 + lib.foldl' lib.max 0 (map (r: stringLength r.label) (lib.concatMap (s: s.rows) sections));
+
+      renderSection =
+        s:
+        [
+          ""
+          "  ${heading s.title}"
+        ]
+        ++ map (r: "    ${dim (padTo labelWidth r.label)}${r.value}") s.rows;
 
       lines = [
         ""
@@ -76,24 +129,9 @@ let
         ""
         "  ${bold site.handle} ${dim "-"} ${site.tagline}"
         "  ${dim "${site.realName} · ${site.location} · ${site.email}"}"
-        ""
-        (section "LINKS")
       ]
-      ++ linkRows
+      ++ lib.concatMap renderSection sections
       ++ [
-        ""
-        (section "KEYS")
-        (row "ssh" (green commands.ssh))
-      ]
-      ++ pgpRows
-      ++ [
-        ""
-        (section "IDENTITY")
-        (row "nostr" "_@${site.domain}  ${dim urls.nostrJson}")
-        ""
-        (section "MISC")
-        (row "security" (cyan urls.securityTxt))
-        (row "humans" (cyan urls.humansTxt))
         ""
         (dim "  ブラウザで開くと HTML が返ります: ${site.url}")
       ]
@@ -158,7 +196,17 @@ let
       builtins.attrNames vars
     )) (builtins.attrValues vars) template;
 
+  # links[].id は /touch?c=<id> の許可リストのキーになる。lib.listToAttrs は
+  # 先勝ちなので、重複すると後の要素が links.json から黙って消える。画面と
+  # curl 出力には両方出るため見た目では気づけないので、ここで落とす。
+  linkIds = map (l: l.id) site.links;
+  duplicateIds = lib.unique (lib.filter (id: lib.count (i: i == id) linkIds > 1) linkIds);
+
 in
+assert lib.assertMsg (duplicateIds == [ ]) ''
+  site.nix の links[].id が重複しています: ${concatStringsSep ", " duplicateIds}
+  /touch?c=<id> の遷移先が先勝ちで上書きされ、後ろの定義は無視されます。
+'';
 {
   ansiTxt = mkProfile { color = true; };
   plainTxt = mkProfile { color = false; };

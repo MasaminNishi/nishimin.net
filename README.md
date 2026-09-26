@@ -28,7 +28,7 @@ npm / pnpm の依存は持たない。`functions/*.ts` は wrangler 内蔵の es
 ```bash
 nix develop            # 開発シェル（wrangler, jq, curl, gnupg, age, figlet …）
 nix run .#dev          # ローカル用にビルドして http://localhost:8788 で起動
-nix flake check        # nixfmt / statix / betterleaks / サイトのビルド
+nix flake check        # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix run .#fix          # nixfmt + statix 自動修正（コミット前に実行）
 nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後に一度だけ）
 ```

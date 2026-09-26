@@ -140,6 +140,18 @@
         # サイトがビルドできること（置換漏れ・WKD 整合性のチェックを含む）。
         site = siteDrv;
 
+        # ローカル確認用のビルドも壊れていないこと。これが無いと site-dev が
+        # 壊れても CI は緑のままで、次に nix run .#dev したときに初めて気づく。
+        site-dev = siteDevDrv;
+
+        # functions/*.ts の型チェック。wrangler の esbuild は型を見ずに
+        # トランスパイルするので、ここで見ないと誰も見ない。
+        typescript = pkgs.runCommand "typescript" { nativeBuildInputs = [ pkgs.typescript ]; } ''
+          export HOME="$TMPDIR"
+          tsc --noEmit --project ${self}/tsconfig.json
+          touch $out
+        '';
+
         nixfmt = pkgs.runCommand "nixfmt" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
           find ${self} -name '*.nix' -exec nixfmt --check {} +
           touch $out

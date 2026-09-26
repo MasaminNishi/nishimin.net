@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 nix develop              # 開発シェル（wrangler, jq, curl, gnupg, age, openssh, figlet, nixfmt, statix）
 nix run .#dev            # site-dev をビルドし wrangler pages dev を http://localhost:8788 で起動
 nix run .#fix            # nixfmt + statix 自動修正（コミット前に実行する）
-nix flake check          # nixfmt / statix / betterleaks / サイトのビルド
+nix flake check          # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix build .#site         # 本番用の静的ツリーを result/ に生成
 nix build .#site-dev     # ローカル確認用（URL が localhost:8788）を result-dev/ に生成
 nix run .#deploy         # Cloudflare Pages へダイレクトアップロード
@@ -106,6 +106,7 @@ Function が自前で作った `Response` には乗らない（実測確認済�
 ### npm 依存を持ち込まない
 
 `package.json` は無い。`functions/*.ts` は wrangler 内蔵の esbuild がそのままトランスパイルする。
+esbuild は型を見ないので、型検査は `nix flake check` の `typescript`（`tsc --noEmit`）が担う。
 Cloudflare の型は `types/cloudflare.d.ts` に必要な分だけ自前宣言してある
 （`@cloudflare/workers-types` は引けない）。型を足すときはここに書く。
 
@@ -134,12 +135,15 @@ ANSI エスケープは `builtins.fromJSON ''""''` で得ている。Nix の文
 
 ### ビルド時ガード
 
-`flake.nix` の `siteDrv` は 2 つの失敗経路を持つ（どちらも動作確認済み）:
+ビルドを落とすガードが 3 つある（いずれも故意に壊して発火を確認済み）:
 
 1. `index.html` に未置換の `@key@` が残っていたらビルド失敗
    → `lib/render.nix` の `htmlVars` にキーを足す
 2. `site.nix` の `pgp.publishWkd = true` なのに `hu/<hash>` が無ければビルド失敗
    → `nix run .#wkd-export` で書き出す
+3. `site.nix` の `links[].id` が重複していたらビルド失敗（`lib/render.nix` の `assert`）
+   → `lib.listToAttrs` は先勝ちなので、重複すると `/touch?c=<id>` の遷移先が
+     黙って消える。表示には両方出るため、止めないと気づけない
 
 `site.nix` の `pgp.publishWkd` は WKD だけでなく**PGP 表示全体のスイッチ**。`false` の間は
 `hu/` ファイル・`index.html` と curl 出力の PGP セクション・`security.txt` の `Encryption:` 行が
