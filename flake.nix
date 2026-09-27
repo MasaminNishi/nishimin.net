@@ -266,6 +266,55 @@
           fi
         '';
       };
+
+      # 本番用の成果物をローカルに立てて smoke を回す。deploy からも呼ぶ。
+      testApp = pkgs.writeShellApplication {
+        name = "test";
+        runtimeInputs = [
+          pkgs.wrangler
+          pkgs.git
+          pkgs.curl
+          pkgs.coreutils
+        ];
+        text = ''
+          cd "$(git rev-parse --show-toplevel)"
+          export WRANGLER_SEND_METRICS=false
+
+          # 開発用の 8788 とぶつからないよう別ポートを使う。
+          port=8799
+          if curl -s -o /dev/null --max-time 1 "http://localhost:$port/" 2>/dev/null; then
+            echo "error: ポート $port が既に使われています" >&2
+            exit 1
+          fi
+
+          # 実際にデプロイするのと同じ成果物を検証する。
+          nix build .#site --out-link result
+
+          log="$(mktemp)"
+          pid=""
+          cleanup() {
+            if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi
+            rm -f "$log"
+          }
+          trap cleanup EXIT
+
+          wrangler pages dev result --port "$port" >"$log" 2>&1 &
+          pid=$!
+
+          for _ in $(seq 1 60); do
+            if curl -s -o /dev/null --max-time 1 "http://localhost:$port/"; then break; fi
+            sleep 1
+          done
+
+          if ! curl -s -o /dev/null --max-time 2 "http://localhost:$port/"; then
+            echo "error: wrangler が起動しませんでした" >&2
+            cat "$log" >&2
+            exit 1
+          fi
+
+          "${smokeApp}/bin/smoke" "http://localhost:$port"
+        '';
+      };
     in
     {
       formatter.${system} = pkgs.nixfmt;
@@ -326,56 +375,9 @@
         # （サーバは自分で起動しておくこと。既定は http://localhost:8788）
         smoke = mkApp "smoke" "エンドポイントを検証する（既定 http://localhost:8788）" smokeApp;
 
-        # nix run .#test — 本番用の成果物をローカルに立てて smoke を回す
-        test = mkApp "test" "ローカルにサーバを立てて smoke を回す" (
-          pkgs.writeShellApplication {
-            name = "test";
-            runtimeInputs = [
-              pkgs.wrangler
-              pkgs.git
-              pkgs.curl
-              pkgs.coreutils
-            ];
-            text = ''
-              cd "$(git rev-parse --show-toplevel)"
-              export WRANGLER_SEND_METRICS=false
+        # nix run .#test — ローカルにサーバを立てて smoke を回す
+        test = mkApp "test" "ローカルにサーバを立てて smoke を回す" testApp;
 
-              # 開発用の 8788 とぶつからないよう別ポートを使う。
-              port=8799
-              if curl -s -o /dev/null --max-time 1 "http://localhost:$port/" 2>/dev/null; then
-                echo "error: ポート $port が既に使われています" >&2
-                exit 1
-              fi
-
-              # 実際にデプロイするのと同じ成果物を検証する。
-              nix build .#site --out-link result
-
-              log="$(mktemp)"
-              pid=""
-              cleanup() {
-                if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi
-                rm -f "$log"
-              }
-              trap cleanup EXIT
-
-              wrangler pages dev result --port "$port" >"$log" 2>&1 &
-              pid=$!
-
-              for _ in $(seq 1 60); do
-                if curl -s -o /dev/null --max-time 1 "http://localhost:$port/"; then break; fi
-                sleep 1
-              done
-
-              if ! curl -s -o /dev/null --max-time 2 "http://localhost:$port/"; then
-                echo "error: wrangler が起動しませんでした" >&2
-                cat "$log" >&2
-                exit 1
-              fi
-
-              "${smokeApp}/bin/smoke" "http://localhost:$port"
-            '';
-          }
-        );
         # nix run .#dev — ビルドしてローカルエミュレータを :8788 で起動
         dev = mkApp "dev" "ビルドしてローカルエミュレータを http://localhost:8788 で起動する" (
           pkgs.writeShellApplication {
@@ -396,19 +398,50 @@
 
         # nix run .#deploy — 本番へダイレクトアップロード
         # （Cloudflare 側のビルド環境に Nix は無いので Git 連携ビルドは使わない）
-        deploy = mkApp "deploy" "nix build の成果物を Cloudflare Pages へダイレクトアップロードする" (
+        # nix run .#deploy — 検証してから本番へダイレクトアップロードし、結果をまた検証する
+        # （Cloudflare 側のビルド環境に Nix は無いので Git 連携ビルドは使わない）
+        deploy = mkApp "deploy" "検証してから Cloudflare Pages へダイレクトアップロードする" (
           pkgs.writeShellApplication {
             name = "deploy";
             runtimeInputs = [
               pkgs.wrangler
               pkgs.git
+              pkgs.coreutils
+              pkgs.gnugrep
             ];
             text = ''
               cd "$(git rev-parse --show-toplevel)"
               export WRANGLER_SEND_METRICS=false
+
+              # 壊れた成果物を本番に上げないよう、アップロードする前に
+              # 同じものをローカルに立てて検証する。CI と同じ守り方を手元にも置く。
+              # 飛ばしたいときは nix develop --command wrangler pages deploy を直接叩く。
+              echo "== アップロード前の検証 =="
+              "${testApp}/bin/test"
+
+              echo
+              echo "== アップロード =="
               nix build .#site --out-link result
+
+              # デプロイ先の URL を拾って、本番にもう一度 smoke を当てるため出力を保持する。
+              out="$(mktemp)"
+              trap 'rm -f "$out"' EXIT
+
               # プロジェクト名は wrangler.jsonc の name が正。ここでは重複して指定しない。
-              exec wrangler pages deploy "$@"
+              # set -o pipefail なので wrangler が失敗すればここで止まり、smoke は走らない。
+              wrangler pages deploy "$@" 2>&1 | tee "$out"
+
+              url="$(grep -oE 'https://[A-Za-z0-9.-]+\.pages\.dev' "$out" | tail -1 || true)"
+
+              echo
+              if [ -n "$url" ]; then
+                echo "== デプロイ先の検証: $url =="
+                "${smokeApp}/bin/smoke" "$url"
+              else
+                echo "デプロイ URL を出力から拾えませんでした。手動で検証してください:" >&2
+                echo "  nix run .#smoke -- https://<デプロイ先>" >&2
+                exit 1
+              fi
             '';
           }
         );

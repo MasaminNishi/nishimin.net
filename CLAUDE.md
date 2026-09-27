@@ -14,7 +14,7 @@ nix run .#smoke -- <url> # 任意の URL を検証（既定 http://localhost:878
 nix flake check          # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix build .#site         # 本番用の静的ツリーを result/ に生成
 nix build .#site-dev     # ローカル確認用（URL が localhost:8788）を result-dev/ に生成
-nix run .#deploy         # Cloudflare Pages へダイレクトアップロード
+nix run .#deploy         # 検証 → アップロード → デプロイ先の検証まで通しで実行
 nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後に一度だけ）
 ```
 
@@ -81,7 +81,8 @@ site.nix ──> lib/render.nix ──> flake.nix の mkSite ──> result/    
 ### デプロイ経路
 
 **Cloudflare Pages の Git 連携ビルドは使わない。** Cloudflare 側のビルド環境に Nix が無いため。
-`.github/workflows/deploy.yml` が `nix flake check` → `nix build` → `wrangler pages deploy` を行う
+`.github/workflows/deploy.yml` が `nix flake check` → `nix build` → `nix run .#test` →
+`wrangler pages deploy` を行う
 （ダイレクトアップロード）。`main` push で本番、PR でプレビュー。
 
 ## 破ると壊れるルール
