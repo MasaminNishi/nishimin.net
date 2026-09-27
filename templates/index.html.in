@@ -39,6 +39,13 @@
             <code>_@@domain@</code>
             <a href="@nostrJsonHref@">nostr.json</a>
           </dd>
+          <dt>Nostr Picture (kind:0)</dt>
+          <dd>
+            <a href="@nostrPictureHref@">@nostrPictureHref@</a>
+            <div>
+              <img src="@nostrPictureHref@" alt="Nostr profile picture" width="160" height="160" />
+            </div>
+          </dd>
         </dl>
       </section>
 

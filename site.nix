@@ -48,6 +48,11 @@
     # NIP-05 で返すのは 64 文字の hex 公開鍵。npub1... ではない。
     # 変換: nak decode <npub> などで hex 化する。
     pubkeyHex = "970a2d037fd9a0ef5b731588eb852d80896aab3331b37f2b885388300fc0da71";
+
+    # kind:0 (metadata) の picture に設定する画像パス。
+    # NIP-05 (/.well-known/nostr.json) とは別物で、反映にはクライアント側で
+    # kind:0 イベントを署名して publish する必要がある。
+    picturePath = "/image/avatar.webp";
   };
 
   securityTxt = {

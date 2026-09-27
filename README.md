@@ -80,6 +80,23 @@ cat ~/.ssh/id_ed25519.pub > static/keys
 nak decode npub1...     # hex に変換
 ```
 
+### Nostr プロフィール画像 (kind:0)
+
+NIP-05 (`/.well-known/nostr.json`) は名前解決専用で、プロフィール画像は含めない。
+プロフィール画像は **kind:0 metadata の `picture`** で管理する。
+
+このリポジトリでは画像の配信だけを担う。
+
+- 既定の画像パス: `/image/avatar.webp`
+- 画像ファイル: `static/image/avatar.webp`
+- 設定値: `site.nix` の `nostr.picturePath`
+
+Nostr クライアント側では、`picture` に次の URL を設定して publish する:
+
+`https://nishimin.net/image/avatar.webp`
+
+注: kind:0 の更新は秘密鍵での署名が必要なため、このリポジトリだけでは反映完了しない。
+
 ### security.txt の Expires
 
 RFC 9116 で必須かつ未来日でなければならない。`site.nix` の `securityTxt.expires` を
@@ -208,6 +225,7 @@ git push -u origin main
 | `/go.json` | `/go/<id>` の遷移先許可リスト |
 | `/go`, `/go/<id>` | 物理媒体（QR / NFC）用リダイレクタ（302） |
 | | `<id>` は `site.nix` の `links[].id` と組み込みの `home` |
+| `/image/avatar.webp` | Nostr kind:0 `picture` 用アイコン画像 |
 | `/.well-known/nostr.json` | NIP-05（CORS `*`） |
 | `/.well-known/security.txt` | RFC 9116 |
 

@@ -25,6 +25,7 @@ let
     securityTxt = "/.well-known/security.txt";
     humansTxt = "/humans.txt";
     nostrJson = "/.well-known/nostr.json";
+    nostrPicture = site.nostr.picturePath;
   };
 
   # 絶対 URL。コピペして使うコマンド例と curl 出力で使う。
@@ -77,6 +78,10 @@ let
             {
               label = "nostr";
               value = "_@${site.domain}  ${dim urls.nostrJson}";
+            }
+            {
+              label = "picture";
+              value = cyan urls.nostrPicture;
             }
           ];
         }
@@ -152,6 +157,7 @@ let
     securityTxtHref = x paths.securityTxt;
     humansTxtHref = x paths.humansTxt;
     nostrJsonHref = x paths.nostrJson;
+    nostrPictureHref = x paths.nostrPicture;
     cmdSsh = x commands.ssh;
   };
 
