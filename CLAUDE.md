@@ -21,6 +21,10 @@ nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後�
 **新しいファイルを追加したら `git add` すること。** flake は git の追跡下にないファイルを見ないので、
 `git add` を忘れると `nix build` / `nix flake check` がそのファイルを認識しない。
 
+**コミットメッセージ規約は `/commit`**（`.claude/skills/commit/SKILL.md`）。
+Type は feat / fix / content / style / refactor / test / docs / chore の 8 種。
+コミット前に `nix run .#fix` と `nix flake check` を通す。
+
 ### エンドポイントの検証
 
 ```bash
