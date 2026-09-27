@@ -30,6 +30,7 @@ nix develop            # 開発シェル（wrangler, jq, curl, age, figlet …�
 nix run .#dev          # ローカル用にビルドして http://localhost:8788 で起動
 nix flake check        # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix run .#fix          # nixfmt + statix 自動修正（コミット前に実行）
+nix run .#test         # ローカルにサーバを立ててエンドポイントを検証する
 nix run .#clean        # 生成物を削除（result 系 / .wrangler）。-n でドライラン
 nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後に一度だけ）
 ```

@@ -9,6 +9,8 @@ nix develop              # 開発シェル（wrangler, jq, curl, age, openssh, f
 nix run .#dev            # site-dev をビルドし wrangler pages dev を http://localhost:8788 で起動
 nix run .#fix            # nixfmt + statix 自動修正（コミット前に実行する）
 nix run .#clean          # gitignore 対象の生成物を削除（-n でドライラン）
+nix run .#test           # ローカルにサーバを立ててエンドポイントを検証する
+nix run .#smoke -- <url> # 任意の URL を検証（既定 http://localhost:8788）
 nix flake check          # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix build .#site         # 本番用の静的ツリーを result/ に生成
 nix build .#site-dev     # ローカル確認用（URL が localhost:8788）を result-dev/ に生成
@@ -19,22 +21,22 @@ nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後�
 **新しいファイルを追加したら `git add` すること。** flake は git の追跡下にないファイルを見ないので、
 `git add` を忘れると `nix build` / `nix flake check` がそのファイルを認識しない。
 
-### 自動テストは無い
-
-テストフレームワークは導入していない。変更の検証はエンドポイントを実際に叩いて行う。
-`nix run .#dev` を起動した状態で:
+### エンドポイントの検証
 
 ```bash
-B=http://localhost:8788
-curl -s $B/ -H 'User-Agent: Mozilla/5.0' | head -3   # ブラウザ → HTML
-curl -s $B/                                          # curl → ANSI テキスト
-curl -s "$B/?plain"                                  # ANSI なし
-curl -sI $B/go                                       # 302 + Location
-curl -sI $B/.well-known/nostr.json                   # Access-Control-Allow-Origin: *
-curl -s $B/keys                                      # ← ASCII アートが返ったら middleware のバグ
+nix run .#test              # 本番用の成果物をローカル（:8799）に立てて検証
+nix run .#smoke -- <url>    # 既に動いているサーバや本番を検証
 ```
 
-最後の 1 行が最重要の回帰テスト（後述の「curl 分岐」を参照）。
+検査内容は `flake.nix` の `smokeApp` にある。**期待値は `site.nix` から生成している**ので、
+`links` を増やせば `/go/<id>` の検査も自動で増える。
+
+いちばん重要なのは **`/keys` に ANSI が混じっていないこと**。curl 分岐がルート以外へ
+漏れると、`curl -L /keys >> ~/.ssh/authorized_keys` が ASCII アートを書き込む。
+これは公開後に他人の環境を壊すので、必ずこの検査を通すこと。
+
+CI（`.github/workflows/deploy.yml`）はデプロイの直前に `nix run .#test` を実行する。
+落ちたらデプロイまで進まない。
 
 ## Architecture
 

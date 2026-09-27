@@ -51,6 +51,11 @@ jobs:
           fi
           echo "Expires: $expires (残り ${days} 日)"
 
+      # デプロイする成果物をローカルに立てて、エンドポイントを実際に叩いて検証する。
+      # ここが落ちたらデプロイまで進まない。
+      - name: smoke test
+        run: nix run .#test
+
       # fork からの PR には secrets が渡らないので、デプロイは同一リポジトリのみ。
       - name: Deploy (production)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

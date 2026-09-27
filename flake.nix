@@ -106,6 +106,166 @@
         runtimeInputs = [ pkgs.betterleaks ];
         text = "exec betterleaks git --staged --redact --no-banner";
       };
+
+      # エンドポイントの検証。本番にもローカルにも同じものを当てられる。
+      # 期待値は site.nix から生成しているので、リンクを増やせば検査も増える。
+      smokeApp = pkgs.writeShellApplication {
+        name = "smoke";
+        runtimeInputs = [
+          pkgs.curl
+          pkgs.jq
+          pkgs.coreutils
+          pkgs.gnugrep
+          pkgs.gnused
+        ];
+        text = ''
+          base="''${1:-http://localhost:8788}"
+          base="''${base%/}"
+
+          failures=0
+          ok() { printf '  \033[32mok\033[0m    %s\n' "$1"; }
+          ng() {
+            printf '  \033[31mFAIL\033[0m  %s\n' "$1"
+            failures=$((failures + 1))
+          }
+
+          # 壊れたサイトに当てたときに set -e で途中終了しないよう、
+          # 失敗しても値を返して検査を続けさせる（診断情報を残すため）。
+          status_of() { curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@" || true; }
+          headers_of() { curl -sSI --max-time 20 "$@" || true; }
+          body_of() { curl -sS --max-time 20 "$@" || true; }
+
+          esc="$(printf '\033')"
+          has_ansi() { grep -qF "''${esc}["; }
+
+          # ヘッダが無いときに grep が 1 を返し、pipefail で途中終了してしまうので
+          # 空文字を返させる。壊れたサイトでも最後まで検査を続けるため。
+          header_value() {
+            headers_of "$1" | grep -i "^$2:" | cut -d: -f2- | sed 's/^ *//' | tr -d '\r' || true
+          }
+
+          expect_status() {
+            got="$(status_of "$base$1")"
+            if [ "$got" = "$2" ]; then ok "$1 -> $2"; else ng "$1 -> $got（期待 $2）"; fi
+          }
+
+          expect_redirect() {
+            st="$(status_of "$base$1")"
+            loc="$(header_value "$base$1" location)"
+            if [ "$st" = "302" ] && [ "$loc" = "$2" ]; then
+              ok "$1 -> 302 $2"
+            else
+              ng "$1 -> $st $loc（期待 302 $2）"
+            fi
+          }
+
+          echo "smoke: $base"
+          echo
+
+          # --- ルートの出し分け ---
+          ct="$(header_value "$base/" content-type)"
+          case "$ct" in
+            *text/plain*) ok "/ (curl) は text/plain" ;;
+            *) ng "/ (curl) の Content-Type が $ct" ;;
+          esac
+
+          if body_of "$base/" | has_ansi; then
+            ok "/ (curl) に ANSI がある"
+          else
+            ng "/ (curl) に ANSI が無い"
+          fi
+
+          if body_of "$base/?plain" | has_ansi; then
+            ng "/?plain に ANSI が残っている"
+          else
+            ok "/?plain は ANSI なし"
+          fi
+
+          ct="$(curl -sSI --max-time 20 -H 'User-Agent: Mozilla/5.0' "$base/" |
+            grep -i '^content-type:' | cut -d: -f2- | tr -d '\r')"
+          case "$ct" in
+            *text/html*) ok "/ (browser) は text/html" ;;
+            *) ng "/ (browser) の Content-Type が $ct" ;;
+          esac
+
+          case "$(header_value "$base/" vary)" in
+            *User-Agent*) ok "/ に Vary: User-Agent" ;;
+            *) ng "/ に Vary: User-Agent が無い" ;;
+          esac
+
+          # --- 最重要の回帰 ---
+          # curl 分岐がルート以外へ漏れると、ここに ASCII アートが返る。
+          # そのまま authorized_keys へ追記されるので、これだけは必ず守る。
+          keys="$(body_of "$base/keys")"
+          if printf '%s' "$keys" | has_ansi; then
+            ng "/keys に ANSI が混じっている（middleware の curl 分岐が漏れている）"
+          elif printf '%s\n' "$keys" | grep -q '^ssh-'; then
+            ok "/keys は SSH 公開鍵（curl 分岐は漏れていない）"
+          else
+            ng "/keys が SSH 公開鍵ではない"
+          fi
+
+          # --- 識別子 ---
+          case "$(header_value "$base/.well-known/nostr.json" access-control-allow-origin)" in
+            "*") ok "nostr.json に CORS *" ;;
+            *) ng "nostr.json に CORS * が無い" ;;
+          esac
+
+          hex="$(body_of "$base/.well-known/nostr.json" | jq -r '.names._ // empty' 2>/dev/null || true)"
+          if [ "$hex" = "${site.nostr.pubkeyHex}" ]; then
+            ok "nostr.json の hex が site.nix と一致"
+          else
+            ng "nostr.json の hex が不一致: $hex"
+          fi
+
+          exp="$(body_of "$base/.well-known/security.txt" | sed -n 's/^Expires:[[:space:]]*//p')"
+          exp_epoch="$(date -u -d "$exp" +%s 2>/dev/null || true)"
+          now_epoch="$(date -u +%s)"
+          if [ -z "$exp" ]; then
+            ng "security.txt に Expires が無い（RFC 9116 で必須）"
+          elif [ -z "$exp_epoch" ]; then
+            ng "security.txt の Expires を日付として解釈できない: $exp"
+          elif [ "$exp_epoch" -le "$now_epoch" ]; then
+            ng "security.txt の Expires ($exp) が失効している"
+          else
+            ok "security.txt の Expires は有効（残り $(( (exp_epoch - now_epoch) / 86400 )) 日）"
+          fi
+
+          expect_status /humans.txt 200
+          expect_status /robots.txt 200
+
+          # --- /go の遷移先。site.nix の links から生成している ---
+          expect_redirect /go "$base/"
+          expect_redirect /go/home "$base/"
+          ${lib.concatMapStringsSep "\n          " (l: "expect_redirect /go/${l.id} \"${l.url}\"") site.links}
+          expect_redirect /go/__unknown__ "$base/"
+
+          case "$(header_value "$base/go/https://evil.example.com" location)" in
+            *evil.example.com*) ng "オープンリダイレクタになっている" ;;
+            *) ok "/go は任意 URL を受け付けない" ;;
+          esac
+
+          expect_status /__nonexistent__ 404
+
+          # --- セキュリティヘッダ。静的アセットにも Function の応答にも乗ること ---
+          for path in / /go /keys; do
+            n="$(headers_of "$base$path" | grep -ciE '^(x-frame-options|x-content-type-options|referrer-policy|permissions-policy|strict-transport-security|content-security-policy):' || true)"
+            if [ "$n" -eq 6 ]; then
+              ok "$path にセキュリティヘッダ 6 本"
+            else
+              ng "$path のセキュリティヘッダが $n/6 本"
+            fi
+          done
+
+          echo
+          if [ "$failures" -eq 0 ]; then
+            echo "すべて通過"
+          else
+            echo "$failures 件失敗" >&2
+            exit 1
+          fi
+        '';
+      };
     in
     {
       formatter.${system} = pkgs.nixfmt;
@@ -161,6 +321,61 @@
       };
 
       apps.${system} = {
+
+        # nix run .#smoke -- <url> — 任意の URL に対してエンドポイントを検証する
+        # （サーバは自分で起動しておくこと。既定は http://localhost:8788）
+        smoke = mkApp "smoke" "エンドポイントを検証する（既定 http://localhost:8788）" smokeApp;
+
+        # nix run .#test — 本番用の成果物をローカルに立てて smoke を回す
+        test = mkApp "test" "ローカルにサーバを立てて smoke を回す" (
+          pkgs.writeShellApplication {
+            name = "test";
+            runtimeInputs = [
+              pkgs.wrangler
+              pkgs.git
+              pkgs.curl
+              pkgs.coreutils
+            ];
+            text = ''
+              cd "$(git rev-parse --show-toplevel)"
+              export WRANGLER_SEND_METRICS=false
+
+              # 開発用の 8788 とぶつからないよう別ポートを使う。
+              port=8799
+              if curl -s -o /dev/null --max-time 1 "http://localhost:$port/" 2>/dev/null; then
+                echo "error: ポート $port が既に使われています" >&2
+                exit 1
+              fi
+
+              # 実際にデプロイするのと同じ成果物を検証する。
+              nix build .#site --out-link result
+
+              log="$(mktemp)"
+              pid=""
+              cleanup() {
+                if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi
+                rm -f "$log"
+              }
+              trap cleanup EXIT
+
+              wrangler pages dev result --port "$port" >"$log" 2>&1 &
+              pid=$!
+
+              for _ in $(seq 1 60); do
+                if curl -s -o /dev/null --max-time 1 "http://localhost:$port/"; then break; fi
+                sleep 1
+              done
+
+              if ! curl -s -o /dev/null --max-time 2 "http://localhost:$port/"; then
+                echo "error: wrangler が起動しませんでした" >&2
+                cat "$log" >&2
+                exit 1
+              fi
+
+              "${smokeApp}/bin/smoke" "http://localhost:$port"
+            '';
+          }
+        );
         # nix run .#dev — ビルドしてローカルエミュレータを :8788 で起動
         dev = mkApp "dev" "ビルドしてローカルエミュレータを http://localhost:8788 で起動する" (
           pkgs.writeShellApplication {
