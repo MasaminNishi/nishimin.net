@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-nix develop              # 開発シェル（wrangler, jq, curl, age, openssh, figlet, nixfmt, statix）
+nix develop              # 開発シェル（wrangler, jq, curl, dig, age, openssh, figlet, nixfmt, statix）
 nix run .#dev            # site-dev をビルドし wrangler pages dev を http://localhost:8788 で起動
 nix run .#fix            # nixfmt + statix 自動修正（コミット前に実行する）
 nix run .#clean          # gitignore 対象の生成物を削除（-n でドライラン）

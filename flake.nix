@@ -600,6 +600,7 @@
           nodejs_22 # wrangler のデバッグ用
           jq
           curl
+          dnsutils # ドメイン紐付け後の DNS 確認（dig）
           age # age-keygen
           openssh # ssh-keygen
           figlet # site.nix の banner の再生成

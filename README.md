@@ -26,7 +26,7 @@ npm / pnpm の依存は持たない。`functions/*.ts` は wrangler 内蔵の es
 ## 開発
 
 ```bash
-nix develop            # 開発シェル（wrangler, jq, curl, age, figlet …）
+nix develop            # 開発シェル（wrangler, jq, curl, dig, age, figlet …）
 nix run .#dev          # ローカル用にビルドして http://localhost:8788 で起動
 nix flake check        # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix run .#fix          # nixfmt + statix 自動修正（コミット前に実行）
@@ -90,18 +90,111 @@ RFC 9116 で必須かつ未来日でなければならない。`site.nix` の `s
 Cloudflare Pages の **Git 連携ビルドは使わない**。Cloudflare 側のビルド環境に Nix が
 無いため、`nix build` した成果物を wrangler のダイレクトアップロードで送っている。
 
-GitHub Actions に以下の secrets を登録する:
-
-| secret | 取得元 |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens（Cloudflare Pages: Edit 権限） |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare のダッシュボード URL に含まれる ID |
-
-`main` への push で本番、PR でプレビューがデプロイされる。手元から送る場合:
+`main` への push で本番、PR でプレビューが自動デプロイされる。手元から送る場合:
 
 ```bash
 nix run .#deploy
 ```
+
+`deploy` は **アップロード前にローカルで検証し、アップロード後にデプロイ先へ
+smoke を当てる**。検証が落ちたらアップロードしない。
+検証を飛ばしたいときは `nix develop --command wrangler pages deploy` を直接叩く。
+
+### 初回公開
+
+一度だけ行う手順。すべて手元で実行する。
+
+#### 1. API トークンを発行する
+
+Cloudflare ダッシュボード → My Profile → API Tokens → Create Token。
+権限は **Account / Cloudflare Pages / Edit**。手順 5 のドメイン紐付けで
+権限不足になる場合は **Zone / DNS / Edit** も足す。
+
+#### 2. 認証情報を設定する
+
+```bash
+export CLOUDFLARE_API_TOKEN=...   # 手順 1 のトークン
+export CLOUDFLARE_ACCOUNT_ID=...  # ダッシュボード URL に含まれる 32 桁
+```
+
+wrangler はこの 2 つを読むので `wrangler login` は要らない。
+同じトークンを手順 6 の CI にも使う。
+
+#### 3. Pages プロジェクトを作る
+
+`wrangler pages deploy` はプロジェクトが無いと対話的に作成を尋ねる。
+CI は非対話なので、先に作っておく。
+
+```bash
+nix develop --command wrangler pages project create nishimin-net --production-branch main
+```
+
+#### 4. 初回デプロイ
+
+```bash
+nix run .#deploy
+```
+
+ローカル検証 → アップロード → デプロイ先の検証まで通しで走る。
+検証が落ちたらアップロードしない。
+
+#### 5. カスタムドメインを紐付ける
+
+wrangler にドメイン用のコマンドが無いので API を直接叩く。
+
+```bash
+# -f は付けない。付けるとエラー時に Cloudflare が返す原因コードが見えなくなる。
+curl -sS -X POST \
+  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/nishimin-net/domains" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"nishimin.net"}' | jq .
+```
+
+返ってくる `zone_tag` を控える。**DNS レコードは自動では作られない**（API 経由で
+追加した場合。`status: pending` / `CNAME record not set` になる）ので、自分で作る。
+
+```bash
+curl -sS -X POST \
+  "https://api.cloudflare.com/client/v4/zones/<ZONE_TAG>/dns_records" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"CNAME","name":"nishimin.net","content":"nishimin-net.pages.dev","proxied":true}' | jq .
+```
+
+`proxied: true` は必須。apex の CNAME は Cloudflare の CNAME フラッタニングで
+成立するため、プロキシを通さないと機能しない。
+
+ここで 403 が返ったらトークンに **Zone / DNS / Edit** が足りていない。
+
+反映を確認する:
+
+```bash
+dig +short nishimin.net
+nix run .#smoke -- https://nishimin.net
+```
+
+ドメインの検証状態は次で見られる（`status` が `active` になれば完了）:
+
+```bash
+curl -sS \
+  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/nishimin-net/domains" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq '.result[] | {name, status, verification_data}'
+```
+
+#### 6. GitHub リポジトリと secrets
+
+**secrets を入れてから push する。** 先に push すると secrets が無い状態で
+CI のデプロイステップが落ちる。
+
+```bash
+gh repo create nishimin.net --public --source=. --remote=origin   # または --private
+gh secret set CLOUDFLARE_API_TOKEN     # 値はプロンプトで入力（履歴に残さない）
+gh secret set CLOUDFLARE_ACCOUNT_ID
+git push -u origin main
+```
+
+以降は `main` への push で本番、PR でプレビューが自動デプロイされる。
 
 ## エンドポイント
 
