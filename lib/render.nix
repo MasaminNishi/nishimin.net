@@ -9,10 +9,6 @@ let
   # Nix の文字列リテラルには \e が無いので JSON 経由で ESC (U+001B) を得る。
   esc = builtins.fromJSON ''"\u001b"'';
 
-  # PGP の一括スイッチ。false の間は鍵が無いので、フィンガープリントや
-  # gpg --locate-keys のコマンド例といった「使えない情報」を一切出さない。
-  inherit (site.pgp) publishWkd;
-
   # 右側に空白を足して幅を揃える。ANSI 付与前の素の文字列に対して使うこと
   # （エスケープシーケンスを桁数に数えてしまうため）。
   padTo =
@@ -29,7 +25,6 @@ let
     securityTxt = "/.well-known/security.txt";
     humansTxt = "/humans.txt";
     nostrJson = "/.well-known/nostr.json";
-    wkd = "/.well-known/openpgpkey/hu/${site.pgp.wkdHash}";
   };
 
   # 絶対 URL。コピペして使うコマンド例と curl 出力で使う。
@@ -39,7 +34,6 @@ let
   # curl で叩いてそのまま使えるコマンド例。HTML と ANSI の両方で同じ文字列を使う。
   commands = {
     ssh = "curl -L ${urls.keys} >> ~/.ssh/authorized_keys";
-    gpg = "gpg --locate-keys ${site.email}";
   };
 
   # ---------------------------------------------------------------------------
@@ -74,16 +68,6 @@ let
             {
               label = "ssh";
               value = green commands.ssh;
-            }
-          ]
-          ++ lib.optionals publishWkd [
-            {
-              label = "gpg (WKD)";
-              value = green commands.gpg;
-            }
-            {
-              label = "fingerprint";
-              value = site.pgp.fingerprint;
             }
           ];
         }
@@ -153,21 +137,6 @@ let
 
   stackHtml = concatStringsSep "\n" (map (s: "        <li>${x s}</li>") site.stack);
 
-  # publishWkd = false のときは空文字列。テンプレート側の @pgpBlock@ が消える。
-  pgpHtml =
-    if publishWkd then
-      ''
-        <h3>OpenPGP</h3>
-        <pre><code>${x commands.gpg}</code></pre>
-        <dl>
-          <dt>Fingerprint</dt>
-          <dd><code>${x site.pgp.fingerprint}</code></dd>
-          <dt>WKD</dt>
-          <dd><a href="${x urls.wkd}">${x urls.wkd}</a></dd>
-        </dl>''
-    else
-      "";
-
   htmlVars = {
     handle = x site.handle;
     realName = x site.realName;
@@ -178,7 +147,6 @@ let
     url = x site.url;
     links = linksHtml;
     stack = stackHtml;
-    pgpBlock = pgpHtml;
     nostrHex = x site.nostr.pubkeyHex;
     # href は相対。ローカルでも本番でもそのままリンクが機能する。
     securityTxtHref = x paths.securityTxt;
@@ -230,16 +198,9 @@ assert lib.assertMsg (clashingIds == [ ]) ''
   '';
 
   # RFC 9116。Expires は必須かつ未来日であること（CI が検査する）。
-  # Encryption は任意なので、鍵が無い間は行ごと出さない。
   securityTxt = ''
     Contact: mailto:${site.email}
     Expires: ${site.securityTxt.expires}
-  ''
-  + lib.optionalString publishWkd ''
-    Encryption: ${urls.wkd}
-    Encryption: openpgp4fpr:${lib.toLower site.pgp.fingerprint}
-  ''
-  + ''
     Preferred-Languages: ${site.securityTxt.preferredLanguages}
     Canonical: ${urls.securityTxt}
   '';
@@ -252,7 +213,7 @@ assert lib.assertMsg (clashingIds == [ ]) ''
       Location: ${site.location}
 
     /* SITE */
-      Standards: HTML5, RFC 9116, NIP-05${lib.optionalString publishWkd ", OpenPGP WKD"}
+      Standards: HTML5, RFC 9116, NIP-05
       Components: なし（依存ゼロ・JavaScript なし）
       Software: ${concatStringsSep ", " site.stack}
   '';

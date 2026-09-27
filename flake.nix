@@ -72,25 +72,6 @@
               echo "  lib/render.nix の htmlVars に対応するキーを足してください" >&2
               exit 1
             fi
-
-            # WKD の hu は GPG 公開鍵のバイナリ。空ファイルを配るとクライアントが壊れるので、
-            # 鍵を用意できていない間は配信しない。
-            hu="$out/.well-known/openpgpkey/hu/${site.pgp.wkdHash}"
-            ${
-              if site.pgp.publishWkd then
-                ''
-                  if [ ! -s "$hu" ]; then
-                    echo "error: pgp.publishWkd = true ですが $hu がありません" >&2
-                    echo "  nix run .#wkd-export で書き出してから再ビルドしてください" >&2
-                    exit 1
-                  fi
-                ''
-              else
-                ''
-                  rm -rf "$out/.well-known/openpgpkey/hu"
-                  echo "note: pgp.publishWkd = false のため WKD の公開鍵は配信しません"
-                ''
-            }
           '';
 
       # 本番用。site.nix の url をそのまま使う。
@@ -137,7 +118,7 @@
       };
 
       checks.${system} = {
-        # サイトがビルドできること（置換漏れ・WKD 整合性のチェックを含む）。
+        # サイトがビルドできること（テンプレートの置換漏れチェックを含む）。
         site = siteDrv;
 
         # apps のシェルスクリプトが実際にビルドできること。
@@ -347,43 +328,6 @@
           }
         );
 
-        # nix run .#wkd-export — GPG 公開鍵を WKD の hu ファイルとして書き出す
-        wkd-export = mkApp "wkd-export" "GPG 公開鍵を WKD の hu ファイルへ書き出す" (
-          pkgs.writeShellApplication {
-            name = "wkd-export";
-            runtimeInputs = [
-              pkgs.gnupg
-              pkgs.git
-            ];
-            text = ''
-              cd "$(git rev-parse --show-toplevel)"
-              email="${site.email}"
-              expected="${site.pgp.wkdHash}"
-
-              actual="$(gpg-wks-client --print-wkd-hash "$email" | awk '{print $1}')"
-              if [ "$actual" != "$expected" ]; then
-                echo "error: WKD ハッシュが site.nix と一致しません" >&2
-                echo "  site.nix: $expected" >&2
-                echo "  実際:     $actual" >&2
-                exit 1
-              fi
-
-              dest="static/.well-known/openpgpkey/hu/$expected"
-              mkdir -p "$(dirname "$dest")"
-              gpg --export --no-armor "$email" > "$dest"
-
-              if [ ! -s "$dest" ]; then
-                echo "error: $email の公開鍵を export できませんでした" >&2
-                rm -f "$dest"
-                exit 1
-              fi
-
-              echo "書き出しました: $dest"
-              echo "site.nix の pgp.publishWkd を true にして再ビルドしてください"
-            '';
-          }
-        );
-
         # nix run .#install-hooks — betterleaks pre-commit hook を有効化（clone 後に一度だけ）
         install-hooks = mkApp "install-hooks" "betterleaks の pre-commit hook を有効化する" (
           pkgs.writeShellApplication {
@@ -408,7 +352,6 @@
           nodejs_22 # wrangler のデバッグ用
           jq
           curl
-          gnupg # gpg-wks-client --print-wkd-hash
           age # age-keygen
           openssh # ssh-keygen
           figlet # site.nix の banner の再生成
@@ -428,7 +371,6 @@
           echo "    nix run .#fix          nixfmt + statix 自動修正（コミット前）"
           echo "    nix run .#clean        生成物を削除（result 系 / .wrangler）"
           echo "    nix flake check        ビルド / 型 / フォーマット / lint / 秘密スキャン"
-          echo "    nix run .#wkd-export   GPG 公開鍵を WKD の hu へ書き出す"
           echo "    nix run .#install-hooks  pre-commit hook を有効化（clone 後に一度）"
           echo ""
           echo "  プロフィールの編集は site.nix の 1 箇所だけ。"

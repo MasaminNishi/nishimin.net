@@ -16,14 +16,6 @@
 /.well-known/security.txt
   Content-Type: text/plain; charset=utf-8
 
-# WKD の hu ファイルは GPG 公開鍵のバイナリ。
-/.well-known/openpgpkey/hu/*
-  Content-Type: application/octet-stream
-  Access-Control-Allow-Origin: *
-
-/.well-known/openpgpkey/policy
-  Content-Type: text/plain; charset=utf-8
-
 # セキュリティヘッダ全般。
 # X-Content-Type-Options は _middleware.ts が「適用済みマーカー」として使うので消さないこと。
 # CSP の style-src は現在 CSS が無いので効いていないが、あとでスタイルを戻すときに

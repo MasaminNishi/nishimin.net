@@ -50,23 +50,6 @@
     pubkeyHex = "970a2d037fd9a0ef5b731588eb852d80896aab3331b37f2b885388300fc0da71";
   };
 
-  pgp = {
-    # `gpg --fingerprint dev@nishimin.net` の 40 桁（スペースなし）。
-    fingerprint = "<PGP_FINGERPRINT_40_HEX>";
-    # WKD direct method のハッシュ。local-part "dev" を小文字化 → SHA-1 → z-base-32。
-    # `gpg-wks-client --print-wkd-hash dev@nishimin.net` で照合できる。
-    wkdHash = "gudx35f8m3ns6jx87gkuda1nmtsb53nd";
-    #
-    # PGP まわりの一括スイッチ。false の間は
-    #   - WKD の hu ファイルを配信しない（空ファイルはクライアントを壊すため）
-    #   - index.html / curl 出力に PGP セクションを出さない
-    #   - security.txt の Encryption 行を出さない
-    # ことで、鍵が無いのにプレースホルダだけ公開される状態を防ぐ。
-    #
-    # 鍵を作ったら fingerprint を埋め、nix run .#wkd-export してから true にする。
-    publishWkd = false;
-  };
-
   securityTxt = {
     # RFC 9116 で必須。未来日であること。CI が失効を検査する。毎年更新すること。
     expires = "2027-09-26T00:00:00.000Z";

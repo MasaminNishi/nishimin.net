@@ -1,6 +1,6 @@
 # nishimin.net
 
-技術者向けアイデンティティハブ。SSH 公開鍵 / OpenPGP / Nostr の識別子を
+技術者向けアイデンティティハブ。SSH 公開鍵と Nostr の識別子を
 標準パスで配信し、`curl` で叩くと ANSI カラーのプロフィールを返す。
 
 GUI 操作は使わない。ルーティング・ヘッダ・エッジロジック・開発環境・デプロイのすべてが
@@ -26,7 +26,7 @@ npm / pnpm の依存は持たない。`functions/*.ts` は wrangler 内蔵の es
 ## 開発
 
 ```bash
-nix develop            # 開発シェル（wrangler, jq, curl, gnupg, age, figlet …）
+nix develop            # 開発シェル（wrangler, jq, curl, age, figlet …）
 nix run .#dev          # ローカル用にビルドして http://localhost:8788 で起動
 nix flake check        # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix run .#fix          # nixfmt + statix 自動修正（コミット前に実行）
@@ -61,7 +61,7 @@ result-dev/               nix build .#site-dev の成果物（URL が localhost:
 
 ## 鍵・識別子の差し替え
 
-SSH 公開鍵と Nostr は設定済み。GPG は未設定（`publishWkd = false` のため非公開）。
+SSH 公開鍵と Nostr は設定済み。
 差し替え・追加の手順は以下。
 
 ### SSH 公開鍵
@@ -69,34 +69,6 @@ SSH 公開鍵と Nostr は設定済み。GPG は未設定（`publishWkd = false`
 ```bash
 ssh-keygen -t ed25519 -C "dev@nishimin.net"   # まだ鍵が無い場合
 cat ~/.ssh/id_ed25519.pub > static/keys
-```
-
-### OpenPGP (WKD)
-
-WKD は「メールアドレスの local-part を SHA-1 → z-base-32 した名前のファイルに、
-公開鍵のバイナリを置く」という仕組み。`dev@nishimin.net` のハッシュは
-`gudx35f8m3ns6jx87gkuda1nmtsb53nd` で、`site.nix` に記録済み。
-
-```bash
-gpg --quick-generate-key "Your Name <dev@nishimin.net>" ed25519 sign,cert 2y
-gpg --fingerprint dev@nishimin.net            # → site.nix の pgp.fingerprint へ
-nix run .#wkd-export                          # hu ファイルを書き出す
-```
-
-そのあと `site.nix` の `pgp.publishWkd` を `true` にする。これは PGP 表示全体の
-スイッチで、`false` の間は次のすべてが出ない。鍵が無いのにプレースホルダだけが
-公開される状態を防ぐため。
-
-- WKD の `hu/` ファイル（空ファイルを置くと WKD クライアントが壊れる）
-- `index.html` と curl 出力の PGP セクション（フィンガープリント、`gpg --locate-keys`）
-- `security.txt` の `Encryption:` 行
-
-`publishWkd = true` なのに鍵が無ければ `nix build` が失敗する。
-
-確認:
-
-```bash
-gpg --locate-keys dev@nishimin.net
 ```
 
 ### Nostr (NIP-05)
@@ -144,7 +116,6 @@ nix run .#deploy
 | | `<id>` は `site.nix` の `links[].id` と組み込みの `home` |
 | `/.well-known/nostr.json` | NIP-05（CORS `*`） |
 | `/.well-known/security.txt` | RFC 9116 |
-| `/.well-known/openpgpkey/hu/<hash>` | WKD 公開鍵（`publishWkd = true` のとき） |
 
 ### 設計上の注意
 

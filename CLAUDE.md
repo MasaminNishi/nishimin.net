@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-nix develop              # 開発シェル（wrangler, jq, curl, gnupg, age, openssh, figlet, nixfmt, statix）
+nix develop              # 開発シェル（wrangler, jq, curl, age, openssh, figlet, nixfmt, statix）
 nix run .#dev            # site-dev をビルドし wrangler pages dev を http://localhost:8788 で起動
 nix run .#fix            # nixfmt + statix 自動修正（コミット前に実行する）
 nix run .#clean          # gitignore 対象の生成物を削除（-n でドライラン）
@@ -13,7 +13,6 @@ nix flake check          # site / site-dev / typescript / nixfmt / statix / bett
 nix build .#site         # 本番用の静的ツリーを result/ に生成
 nix build .#site-dev     # ローカル確認用（URL が localhost:8788）を result-dev/ に生成
 nix run .#deploy         # Cloudflare Pages へダイレクトアップロード
-nix run .#wkd-export     # GPG 公開鍵を WKD の hu ファイルへ書き出す
 nix run .#install-hooks  # betterleaks pre-commit hook を有効化（clone 後に一度だけ）
 ```
 
@@ -66,7 +65,7 @@ site.nix ──> lib/render.nix ──> flake.nix の mkSite ──> result/    
 
 ### 入力と出力のディレクトリ
 
-- `static/` — 入力。そのまま配信されるファイル（`_headers`, 公開鍵, WKD policy, 404.html）
+- `static/` — 入力。そのまま配信されるファイル（`_headers`, 公開鍵, `robots.txt`, `404.html`）
 - `result/` — `nix build .#site`（本番用）の出力。`/nix/store` へのシンボリックリンクで gitignore 済み。
   `wrangler.jsonc` の `pages_build_output_dir` がここを指す
 - `result-dev/` — `nix build .#site-dev`（ローカル確認用）の出力。`nix run .#dev` が使う
@@ -145,20 +144,13 @@ ANSI エスケープは `builtins.fromJSON ''""''` で得ている。Nix の文
 
 ### ビルド時ガード
 
-ビルドを落とすガードが 3 つある（いずれも故意に壊して発火を確認済み）:
+ビルドを落とすガードが 2 つある（どちらも故意に壊して発火を確認済み）:
 
 1. `index.html` に未置換の `@key@` が残っていたらビルド失敗
    → `lib/render.nix` の `htmlVars` にキーを足す
-2. `site.nix` の `pgp.publishWkd = true` なのに `hu/<hash>` が無ければビルド失敗
-   → `nix run .#wkd-export` で書き出す
-3. `site.nix` の `links[].id` が重複していたらビルド失敗（`lib/render.nix` の `assert`）
+2. `site.nix` の `links[].id` が重複していたらビルド失敗（`lib/render.nix` の `assert`）
    → `lib.listToAttrs` は先勝ちなので、重複すると `/go/<id>` の遷移先が
      黙って消える。表示には両方出るため、止めないと気づけない
-
-`site.nix` の `pgp.publishWkd` は WKD だけでなく**PGP 表示全体のスイッチ**。`false` の間は
-`hu/` ファイル・`index.html` と curl 出力の PGP セクション・`security.txt` の `Encryption:` 行が
-すべて出ない（鍵が無いのにプレースホルダだけ公開されるのを防ぐため）。
-実装は `lib/render.nix` の `publishWkd` 分岐と、テンプレートの `@pgpBlock@`。
 
 ### security.txt の Expires
 
@@ -168,9 +160,5 @@ Nix は純粋で現在時刻を扱えないので、失効検査は CI（`.githu
 
 ## 鍵・ID の状態
 
-SSH 公開鍵と Nostr の hex 公開鍵は実データが入っている。
-未設定なのは `pgp.fingerprint` だけで、`publishWkd = false` なので公開はされていない。
-差し替え手順（SSH / GPG+WKD / Nostr hex）は `README.md` にある。
-
-`dev@nishimin.net` の WKD ハッシュは `gudx35f8m3ns6jx87gkuda1nmtsb53nd`
-（`gpg-wks-client --print-wkd-hash` で照合済み）。
+SSH 公開鍵と Nostr の hex 公開鍵は実データが入っている。プレースホルダは残っていない。
+差し替え手順（SSH / Nostr hex）は `README.md` にある。
