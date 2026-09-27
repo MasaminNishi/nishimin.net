@@ -140,6 +140,15 @@
         # サイトがビルドできること（置換漏れ・WKD 整合性のチェックを含む）。
         site = siteDrv;
 
+        # apps のシェルスクリプトが実際にビルドできること。
+        # writeShellApplication は shellcheck を通すので、構文ミスや危うい書き方を
+        # ここで拾える。nix flake check は apps の評価しかしないため、これが無いと
+        # スクリプトが壊れていても緑のまま通ってしまう（実際に一度通してしまった）。
+        apps-build = pkgs.runCommand "apps-build" { } ''
+          ${lib.concatMapStringsSep "\n" (app: "test -x ${app.program}") (lib.attrValues self.apps.${system})}
+          touch $out
+        '';
+
         # ローカル確認用のビルドも壊れていないこと。これが無いと site-dev が
         # 壊れても CI は緑のままで、次に nix run .#dev したときに初めて気づく。
         site-dev = siteDevDrv;
@@ -226,6 +235,118 @@
           }
         );
 
+        # nix run .#clean — gitignore 対象の生成物を消す
+        clean = mkApp "clean" "ビルド生成物と wrangler のローカル状態を削除する" (
+          pkgs.writeShellApplication {
+            name = "clean";
+            runtimeInputs = [
+              pkgs.git
+              pkgs.coreutils
+              pkgs.procps
+              pkgs.gnugrep
+              pkgs.gnused
+            ];
+            text = ''
+              cd "$(git rev-parse --show-toplevel)"
+
+              # 削除対象は明示列挙する。git clean -X で .gitignore 全体を消す方式にすると、
+              # .direnv のような「消しても壊れないが、消すと次回が遅くなるだけ」のキャッシュまで
+              # 巻き込む。消し忘れより消しすぎのほうが困るので、こちらを既定にしている。
+              shopt -s nullglob
+              candidates=(result result-* .wrangler)
+              shopt -u nullglob
+
+              # 消さないと決めているもの。下のドリフト検出でも無視する。
+              keep=(.direnv)
+
+              targets=()
+              for p in "''${candidates[@]}"; do
+                if [ -e "$p" ] || [ -L "$p" ]; then
+                  # 追跡ファイルを絶対に消さないための保険。列挙を打ち間違えてもここで止まる。
+                  if ! git check-ignore -q "$p"; then
+                    echo "error: $p は .gitignore の対象ではありません。中止します。" >&2
+                    exit 1
+                  fi
+                  targets+=("$p")
+                fi
+              done
+
+              # .gitignore にあるのに、消す対象にも残す対象にも入っていないものを知らせる。
+              # 明示列挙にした代償（列挙が古くなること）に気づけるようにするため。
+              drift="$(
+                git clean -Xdn | sed 's/^Would remove //; s#/$##' |
+                  grep -vxF -f <(printf '%s\n' "''${candidates[@]}" "''${keep[@]}") || true
+              )"
+
+              if [ ''${#targets[@]} -eq 0 ]; then
+                echo "消すものはありません。"
+              else
+                echo "以下を削除します:"
+                for p in "''${targets[@]}"; do
+                  if [ -L "$p" ]; then
+                    printf '  %-12s -> %s\n' "$p" "$(readlink "$p")"
+                  else
+                    printf '  %-12s %s\n' "$p" "$(du -sh "$p" | cut -f1)"
+                  fi
+                done
+              fi
+
+              for k in "''${keep[@]}"; do
+                if [ -e "$k" ]; then
+                  echo "  ($k は残します。消しても壊れないが次回が遅くなるだけのキャッシュ)"
+                fi
+              done
+
+              if [ -n "$drift" ]; then
+                echo
+                echo "note: .gitignore にありますが clean の対象外です。"
+                echo "      消すべきなら flake.nix の candidates に、残すなら keep に足してください。"
+                while IFS= read -r line; do echo "  $line"; done <<<"$drift"
+              fi
+
+              if [ ''${#targets[@]} -eq 0 ]; then
+                exit 0
+              fi
+
+              if [ "''${1:-}" = "-n" ] || [ "''${1:-}" = "--dry-run" ]; then
+                echo
+                echo "(ドライラン。実際には削除していません)"
+                exit 0
+              fi
+
+              # wrangler が .wrangler を掴んだまま消すと不可解な壊れ方をするので止める。
+              #
+              # pgrep -f は「コマンドライン全体に文字列が含まれる」で一致するため、
+              # この文字列を書いた別のシェルまで拾ってしまう（実際に誤検出した）。
+              # argv の要素そのものが cli.js のパスかどうかで判定する。
+              running=""
+              for cmdline in /proc/[0-9]*/cmdline; do
+                pid="''${cmdline#/proc/}"
+                pid="''${pid%/cmdline}"
+                if tr '\0' '\n' <"$cmdline" 2>/dev/null |
+                  grep -qx '.*/wrangler-dist/cli\.js'; then
+                  running="$running $pid"
+                fi
+              done
+
+              if [ -e .wrangler ] && [ -n "$running" ]; then
+                echo >&2
+                echo "error: wrangler が動いています。止めてから実行してください。" >&2
+                for pid in $running; do
+                  ps -o args= -p "$pid" 2>/dev/null | cut -c1-100 | sed 's/^/  /' >&2
+                done
+                exit 1
+              fi
+
+              rm -rf "''${targets[@]}"
+
+              echo
+              echo "削除しました。result 系は nix build の GC root なので、"
+              echo "外れたぶんは nix-collect-garbage で回収できるようになります。"
+            '';
+          }
+        );
+
         # nix run .#wkd-export — GPG 公開鍵を WKD の hu ファイルとして書き出す
         wkd-export = mkApp "wkd-export" "GPG 公開鍵を WKD の hu ファイルへ書き出す" (
           pkgs.writeShellApplication {
@@ -305,6 +426,7 @@
           echo "    nix run .#dev          ビルドして http://localhost:8788 で起動"
           echo "    nix run .#deploy       本番へダイレクトアップロード"
           echo "    nix run .#fix          nixfmt + statix 自動修正（コミット前）"
+          echo "    nix run .#clean        生成物を削除（result 系 / .wrangler）"
           echo "    nix flake check        ビルド / 型 / フォーマット / lint / 秘密スキャン"
           echo "    nix run .#wkd-export   GPG 公開鍵を WKD の hu へ書き出す"
           echo "    nix run .#install-hooks  pre-commit hook を有効化（clone 後に一度）"

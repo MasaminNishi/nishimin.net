@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 nix develop              # 開発シェル（wrangler, jq, curl, gnupg, age, openssh, figlet, nixfmt, statix）
 nix run .#dev            # site-dev をビルドし wrangler pages dev を http://localhost:8788 で起動
 nix run .#fix            # nixfmt + statix 自動修正（コミット前に実行する）
+nix run .#clean          # gitignore 対象の生成物を削除（-n でドライラン）
 nix flake check          # site / site-dev / typescript / nixfmt / statix / betterleaks
 nix build .#site         # 本番用の静的ツリーを result/ に生成
 nix build .#site-dev     # ローカル確認用（URL が localhost:8788）を result-dev/ に生成
