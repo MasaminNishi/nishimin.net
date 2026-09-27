@@ -434,14 +434,37 @@
               url="$(grep -oE 'https://[A-Za-z0-9.-]+\.pages\.dev' "$out" | tail -1 || true)"
 
               echo
-              if [ -n "$url" ]; then
-                echo "== デプロイ先の検証: $url =="
-                "${smokeApp}/bin/smoke" "$url"
-              else
+              if [ -z "$url" ]; then
                 echo "デプロイ URL を出力から拾えませんでした。手動で検証してください:" >&2
                 echo "  nix run .#smoke -- https://<デプロイ先>" >&2
                 exit 1
               fi
+
+              # デプロイ直後はエッジの切り替えが終わっておらず、Function が効かない・
+              # アセットが 404 になる状態を踏む（実際に CI で 8 件落ちた）。
+              # 目印は 2 つ。ルートが text/plain を返すこと（middleware が生きている）と、
+              # 静的アセットが引けること。両方揃えば配信は切り替わっている。
+              echo "== デプロイ先の反映を待つ: $url =="
+              live=0
+              for _ in $(seq 1 30); do
+                if curl -sSI --max-time 10 "$url/" 2>/dev/null |
+                  grep -qi '^content-type:.*text/plain' &&
+                  [ "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$url/humans.txt")" = "200" ]; then
+                  live=1
+                  break
+                fi
+                sleep 2
+              done
+
+              if [ "$live" -eq 1 ]; then
+                echo "反映を確認しました。"
+              else
+                echo "warning: 60 秒待っても反映を確認できませんでした。そのまま検証します。" >&2
+              fi
+
+              echo
+              echo "== デプロイ先の検証: $url =="
+              "${smokeApp}/bin/smoke" "$url"
             '';
           }
         );
