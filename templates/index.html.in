@@ -24,6 +24,13 @@
       </header>
 
       <section>
+        <h2>Stack</h2>
+        <ul>
+@stack@
+        </ul>
+      </section>
+
+      <section>
         <h2>Keys</h2>
         <p>公開鍵はプレーンテキストで直接取得できる。</p>
 
@@ -64,9 +71,9 @@
           <li><a href="@humansTxtHref@">humans.txt</a> — 制作者・使用技術</li>
         </ul>
 
-        <h3>Stack</h3>
+        <h3>Built with</h3>
         <ul>
-@stack@
+@siteStack@
         </ul>
       </section>
     </main>

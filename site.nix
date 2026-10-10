@@ -13,7 +13,7 @@
 
   # サイトのバージョン。公開物に影響する変更を入れたら同じコミットで上げる。
   # 判断基準は .claude/skills/commit/SKILL.md の「バージョン」節を参照。
-  version = "1.0.0";
+  version = "1.1.0";
 
   # フッターからコミットへリンクするのに使う。
   repo = "https://github.com/MasaminNishi/nishimin.net";
@@ -47,12 +47,22 @@
     }
   ];
 
-  # 使用技術。humans.txt と index.html の両方に出る。
+  # 本人の扱える技術。index.html / curl 出力 / humans.txt の TEAM に出る。
   stack = [
+    "Ruby"
+    "Nix"
+    "SKK"
+    "JavaScript"
+    "React"
+    "Electrical and Electronic Engineering"
+  ];
+
+  # このサイト自体の構成。index.html の Meta と humans.txt の SITE に出る。
+  # 本人の技術（stack）とは別物なので混ぜないこと。
+  siteStack = [
     "Cloudflare Pages / Pages Functions"
     "Nix Flakes (静的サイトは nix build で生成)"
     "TypeScript (edge runtime)"
-    "NixOS"
   ];
 
   nostr = {

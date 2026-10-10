@@ -55,7 +55,13 @@ let
       # 各セクションをまずデータとして組む。ここから最長ラベルを測るので、
       # 行を足してもラベル幅が自動で追随する（桁数を決め打つと、長いラベルを
       # 入れたときに詰め物が入らず値と密着して黙って崩れる）。
+      #
+      # ラベルを持たない並びは rows ではなく text（行のリスト）に置く。
       sections = [
+        {
+          title = "STACK";
+          text = [ (concatStringsSep ", " site.stack) ];
+        }
         {
           title = "LINKS";
           rows = map (l: {
@@ -102,7 +108,8 @@ let
 
       # 最長ラベル + 2 桁。値との間に必ず 2 つ以上の空白が入る。
       labelWidth =
-        2 + lib.foldl' lib.max 0 (map (r: stringLength r.label) (lib.concatMap (s: s.rows) sections));
+        2
+        + lib.foldl' lib.max 0 (map (r: stringLength r.label) (lib.concatMap (s: s.rows or [ ]) sections));
 
       renderSection =
         s:
@@ -110,7 +117,8 @@ let
           ""
           "  ${heading s.title}"
         ]
-        ++ map (r: "    ${dim (padTo labelWidth r.label)}${r.value}") s.rows;
+        ++ map (r: "    ${dim (padTo labelWidth r.label)}${r.value}") (s.rows or [ ])
+        ++ map (t: "    ${t}") (s.text or [ ]);
 
       lines = [
         ""
@@ -144,7 +152,7 @@ let
     map (l: "        <li><a rel=\"me\" href=\"${x l.url}\">${x l.label}</a></li>") site.links
   );
 
-  stackHtml = concatStringsSep "\n" (map (s: "        <li>${x s}</li>") site.stack);
+  listHtml = items: concatStringsSep "\n" (map (s: "        <li>${x s}</li>") items);
 
   # フッター。バージョンとリビジョンを出し、リビジョンからコミットへリンクする。
   #
@@ -170,7 +178,8 @@ let
     domain = x site.domain;
     url = x site.url;
     links = linksHtml;
-    stack = stackHtml;
+    stack = listHtml site.stack;
+    siteStack = listHtml site.siteStack;
     footer = footerHtml;
     nostrHex = x site.nostr.pubkeyHex;
     # href は相対。ローカルでも本番でもそのままリンクが機能する。
@@ -237,6 +246,7 @@ assert lib.assertMsg (clashingIds == [ ]) ''
       Site: ${site.url}
       Contact: ${builtins.replaceStrings [ "@" ] [ " [at] " ] site.email}
       Location: ${site.location}
+      Stack: ${concatStringsSep ", " site.stack}
 
     /* SITE */
       Version: ${site.version}
@@ -244,7 +254,7 @@ assert lib.assertMsg (clashingIds == [ ]) ''
       Last update: ${site.lastUpdate}
       Standards: HTML5, RFC 9116, NIP-05
       Components: なし（依存ゼロ・JavaScript なし）
-      Software: ${concatStringsSep ", " site.stack}
+      Software: ${concatStringsSep ", " site.siteStack}
   '';
 
   # /go/<id> の遷移先許可リスト。オープンリダイレクタにしないため、
