@@ -425,6 +425,7 @@
               pkgs.git
               pkgs.coreutils
               pkgs.gnugrep
+              pkgs.gnused
             ];
             text = ''
               cd "$(git rev-parse --show-toplevel)"
@@ -459,24 +460,34 @@
 
               # デプロイ直後はエッジの切り替えが終わっておらず、Function が効かない・
               # アセットが 404 になる状態を踏む（実際に CI で 8 件落ちた）。
-              # 目印は 2 つ。ルートが text/plain を返すこと（middleware が生きている）と、
-              # 静的アセットが引けること。両方揃えば配信は切り替わっている。
-              echo "== デプロイ先の反映を待つ: $url =="
-              live=0
-              for _ in $(seq 1 30); do
-                if curl -sSI --max-time 10 "$url/" 2>/dev/null |
-                  grep -qi '^content-type:.*text/plain' &&
-                  [ "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$url/humans.txt")" = "200" ]; then
-                  live=1
-                  break
-                fi
-                sleep 2
-              done
+              #
+              # 以前は「ルートが text/plain を返す」というヒューリスティックで判定して
+              # いたが、いまは humans.txt の Revision を使って厳密に照合する。
+              # 期待値は git ではなくビルドした成果物から読む。そうすると dirty な
+              # ツリーからデプロイしても（-dirty 付きで）正しく一致する。
+              revfield() { sed -n 's/^[[:space:]]*Revision:[[:space:]]*//p'; }
+              expected="$(revfield <result/humans.txt)"
+
+              if [ -z "$expected" ]; then
+                echo "warning: 成果物から Revision を読めませんでした。待たずに検証します。" >&2
+                live=1
+              else
+                echo "== デプロイ先の反映を待つ: $url (revision $expected) =="
+                live=0
+                for _ in $(seq 1 30); do
+                  got="$(curl -sS --max-time 10 "$url/humans.txt" 2>/dev/null | revfield || true)"
+                  if [ "$got" = "$expected" ]; then
+                    live=1
+                    break
+                  fi
+                  sleep 2
+                done
+              fi
 
               if [ "$live" -eq 1 ]; then
                 echo "反映を確認しました。"
               else
-                echo "warning: 60 秒待っても反映を確認できませんでした。そのまま検証します。" >&2
+                echo "warning: 60 秒待っても revision $expected に切り替わりませんでした。そのまま検証します。" >&2
               fi
 
               echo

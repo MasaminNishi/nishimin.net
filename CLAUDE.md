@@ -89,6 +89,11 @@ humans.txt・HTML のフッター・curl 出力の 3 箇所に出す。
 
 `version` を上げる判断基準は `/commit` の「バージョン」節にある。
 
+`deploy` はこのリビジョンで反映を判定する。ビルドした成果物の
+`humans.txt` の `Revision` と、デプロイ先が返す同じ値が一致するまで待つ。
+期待値を git ではなく成果物から読んでいるので、dirty なツリーからデプロイしても
+正しく一致する。
+
 ### デプロイ経路
 
 **Cloudflare Pages の Git 連携ビルドは使わない。** Cloudflare 側のビルド環境に Nix が無いため。
