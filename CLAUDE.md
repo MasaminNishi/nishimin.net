@@ -69,6 +69,18 @@ site.nix ──> lib/render.nix ──> flake.nix の mkSite ──> result/    
 
 プロフィールの変更は `site.nix` の 1 箇所で済ませる。表示の整形ロジックを変えるときだけ `lib/render.nix` を触る。
 
+### `stack` と `siteStack`
+
+`site.nix` には技術のリストが 2 つある。混ぜないこと。
+
+- `stack` — 本人の扱える技術。HTML の `Stack`・curl 出力・humans.txt の TEAM に出る
+- `siteStack` — このサイト自体の構成。HTML の `Built with`・humans.txt の `Software` に出る
+
+**サイトの技術構成を変えたら、同じコミットで `siteStack` を更新すること。**
+ホスティング・ビルド手段・Functions の言語やランタイムの追加・置換・廃止が対象
+（例: Cloudflare Pages から移る、Functions を TypeScript 以外で書く、ビルドを Nix 以外にする）。
+`siteStack` はコードから自動生成していないので、更新を忘れると公開中の表示が黙って実態とずれる。
+
 ### 入力と出力のディレクトリ
 
 - `static/` — 入力。そのまま配信されるファイル（`_headers`, 公開鍵, `robots.txt`, `404.html`）
