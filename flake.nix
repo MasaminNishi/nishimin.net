@@ -465,8 +465,21 @@
               # いたが、いまは humans.txt の Revision を使って厳密に照合する。
               # 期待値は git ではなくビルドした成果物から読む。そうすると dirty な
               # ツリーからデプロイしても（-dirty 付きで）正しく一致する。
+              #
+              # humans.txt は静的アセットなので、それだけでは Function の反映を保証
+              # しない。静的アセットが先に切り替わり、middleware が効く前に smoke が
+              # 走って / の Vary や /go が落ちた（CI で実測）。そこで middleware が
+              # 返す curl 出力（/?plain）のフッターにも同じリビジョンが出るのを待つ。
+              # エッジ間で切り替えが揺れるので、3 回連続で揃ったら反映とみなす。
               revfield() { sed -n 's/^[[:space:]]*Revision:[[:space:]]*//p'; }
               expected="$(revfield <result/humans.txt)"
+
+              ready() {
+                got="$(curl -sS --max-time 10 "$url/humans.txt" 2>/dev/null | revfield || true)"
+                [ "$got" = "$expected" ] || return 1
+                curl -sS --max-time 10 -A curl/8 "$url/?plain" 2>/dev/null |
+                  grep -qF " · $expected"
+              }
 
               if [ -z "$expected" ]; then
                 echo "warning: 成果物から Revision を読めませんでした。待たずに検証します。" >&2
@@ -474,11 +487,16 @@
               else
                 echo "== デプロイ先の反映を待つ: $url (revision $expected) =="
                 live=0
+                streak=0
                 for _ in $(seq 1 30); do
-                  got="$(curl -sS --max-time 10 "$url/humans.txt" 2>/dev/null | revfield || true)"
-                  if [ "$got" = "$expected" ]; then
-                    live=1
-                    break
+                  if ready; then
+                    streak=$((streak + 1))
+                    if [ "$streak" -ge 3 ]; then
+                      live=1
+                      break
+                    fi
+                  else
+                    streak=0
                   fi
                   sleep 2
                 done
