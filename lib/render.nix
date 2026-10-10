@@ -125,7 +125,11 @@ let
         (dim "  ブラウザで開くと HTML が返ります: ${site.url}")
       ]
       ++ lib.optional color (dim "  色を消す: curl '${site.url}/?plain'")
-      ++ [ "" ];
+      ++ [
+        ""
+        (dim "  v${site.version} · ${site.revision}")
+        ""
+      ];
     in
     concatStringsSep "\n" lines;
 
@@ -142,6 +146,21 @@ let
 
   stackHtml = concatStringsSep "\n" (map (s: "        <li>${x s}</li>") site.stack);
 
+  # フッター。バージョンとリビジョンを出し、リビジョンからコミットへリンクする。
+  #
+  # 作業ツリーが汚れていると revision が "0ecb3bb-dirty" のようになり、その SHA の
+  # コミットは存在しない（まだコミットしていない変更が混ざっている）。
+  # 存在しない URL へリンクしないよう、-dirty が付いていたら文字列だけ出す。
+  footerHtml =
+    let
+      linkable = site.revision != "unknown" && !lib.hasSuffix "-dirty" site.revision;
+      rev =
+        if linkable then
+          "<a href=\"${x site.repo}/commit/${x site.revision}\"><code>${x site.revision}</code></a>"
+        else
+          "<code>${x site.revision}</code>";
+    in
+    "      <p>v${x site.version} · ${rev}</p>";
   htmlVars = {
     handle = x site.handle;
     realName = x site.realName;
@@ -152,6 +171,7 @@ let
     url = x site.url;
     links = linksHtml;
     stack = stackHtml;
+    footer = footerHtml;
     nostrHex = x site.nostr.pubkeyHex;
     # href は相対。ローカルでも本番でもそのままリンクが機能する。
     securityTxtHref = x paths.securityTxt;
@@ -219,6 +239,9 @@ assert lib.assertMsg (clashingIds == [ ]) ''
       Location: ${site.location}
 
     /* SITE */
+      Version: ${site.version}
+      Revision: ${site.revision}
+      Last update: ${site.lastUpdate}
       Standards: HTML5, RFC 9116, NIP-05
       Components: なし（依存ゼロ・JavaScript なし）
       Software: ${concatStringsSep ", " site.stack}

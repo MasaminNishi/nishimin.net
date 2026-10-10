@@ -50,7 +50,7 @@ figlet -f smslant -w 120 "nishimin.net"   # 出力を site.nix の banner に貼
 ### ディレクトリ
 
 ```
-site.nix                  プロフィールデータの単一ソース
+site.nix                  プロフィールデータとバージョンの単一ソース
 lib/render.nix            site.nix → 各ファイルの中身を組み立てる純関数群
 templates/index.html.in   @key@ プレースホルダ入りの HTML
 static/                   そのまま配信されるファイル（_headers, 公開鍵, 404.html …）

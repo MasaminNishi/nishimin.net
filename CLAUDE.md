@@ -78,6 +78,17 @@ site.nix ──> lib/render.nix ──> flake.nix の mkSite ──> result/    
 - `functions/` — リポジトリ直下に置いたまま。wrangler は **cwd の `functions/`** を読むので
   `result/` には入れない
 
+### バージョンとリビジョン
+
+`site.nix` の `version`（SemVer）と、git から取るリビジョンを
+humans.txt・HTML のフッター・curl 出力の 3 箇所に出す。
+
+リビジョンは `flake.nix` が `self.shortRev or self.dirtyShortRev or "unknown"` で
+注入する。**`self.shortRev` を素で参照しないこと。** 作業ツリーが汚れていると
+`shortRev` は存在せず、評価が落ちる（実測確認済み）。
+
+`version` を上げる判断基準は `/commit` の「バージョン」節にある。
+
 ### デプロイ経路
 
 **Cloudflare Pages の Git 連携ビルドは使わない。** Cloudflare 側のビルド環境に Nix が無いため。

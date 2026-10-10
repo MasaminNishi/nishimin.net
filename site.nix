@@ -2,10 +2,21 @@
 # index.html / ansi.txt / plain.txt / humans.txt / nostr.json / security.txt /
 # go.json は全てこのファイルから生成される（lib/render.nix）。
 #
-# <...> の値はプレースホルダ。差し替え手順は README.md を参照。
+# 差し替え手順は README.md を参照。
+#
+# url / revision / lastUpdate はビルド時に flake.nix が注入する。
+# url はここの値が本番用で、dev ビルドでは localhost:8788 に差し替わる。
+# revision と lastUpdate はここには書かない（git から取る）。
 {
   domain = "nishimin.net";
   url = "https://nishimin.net";
+
+  # サイトのバージョン。公開物に影響する変更を入れたら同じコミットで上げる。
+  # 判断基準は .claude/skills/commit/SKILL.md の「バージョン」節を参照。
+  version = "1.0.0";
+
+  # フッターからコミットへリンクするのに使う。
+  repo = "https://github.com/MasaminNishi/nishimin.net";
 
   handle = "MasaminNishi";
   realName = "m-nishijima";

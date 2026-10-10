@@ -15,6 +15,23 @@
       # プロフィールの単一ソース。
       site = import ./site.nix;
 
+      # ビルド時に決まる値。site.nix には書かず、ここで注入する。
+      #
+      # self.shortRev は作業ツリーがクリーンなときだけ存在し、汚れていると
+      # 消えて dirtyShortRev（例 0ecb3bb-dirty）になる。素で参照すると
+      # dirty なツリーでビルドが落ちるので or で受ける。実測で確認済み。
+      revision = self.shortRev or self.dirtyShortRev or "unknown";
+
+      # lastModifiedDate は YYYYMMDDHHMMSS。日付だけに整形する。
+      lastUpdate =
+        let
+          d = self.lastModifiedDate or "";
+        in
+        if builtins.stringLength d >= 8 then
+          "${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}"
+        else
+          "unknown";
+
       # 配信する静的ツリーを作る。static/ をそのままコピーし、site.nix 由来の
       # 生成物を上から置く。
       #
@@ -27,7 +44,7 @@
           rendered = import ./lib/render.nix {
             inherit lib;
             site = site // {
-              inherit url;
+              inherit url revision lastUpdate;
             };
           };
         in
